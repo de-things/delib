@@ -14,26 +14,48 @@ C:\Users\your_username\Documents\Arduino\libraries\delib\delib.h
 ```cpp
 // firmware.ino
 
-// include delib
+// include lib
 #include <delib.h>
 
-// define mac
+// set mac
 uint8_t mac[] = { 13, 13, 13, 13, 13, 13 };
 
-// define delib object
-delib Delib;
+// lib instance
+Delib delib;
+
+// test handler for wlan connection
+void testHandler() {
+  if (delib.auth_wlan_request()) { // do something if client sent a proper secret
+    // your code logic goes here
+    // ...
+    Serial.println("test passed!");
+  }
+}
 
 void setup() {
-  // set wifi credentials (ssid, key)
-  Delib.set_wifi_credentials("whale_wifi", "wha1e_p@ss");
+  // set wlan secret
+  delib.set_secret("SUPER_SECRET");
 
-  // initialize delib server
-  Delib.init(mac);
+  // set wlan credentials
+  delib.set_wifi_credentials("whale_ssid", "whale_password");
+
+  // set wlan handler
+  delib.wlan_server.on("/test", testHandler);
+
+  // start profile select and servers initialization
+  delib.init(mac);
 }
 
 void loop() {
-  // handle client<>server communication
-  Delib.update();
+  // test handler for ethernet connection
+  if (delib.ethn_buffer == "test") { // do something if client sent "test"
+    // your code logic goes here
+    // ...
+    Serial.println("test passed!");
+  }
+
+  // call server update
+  delib.update();
 }
 
 ```
