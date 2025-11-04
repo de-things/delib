@@ -1,8 +1,17 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
 #include <Ethernet.h>
+    
+enum class State {
+    Default,
+    Ethn,   // Ethernet
+    Wlan    // WLAN
+};
 
-class delib {
+/**
+* Core network lib class to handle server side of de:things devices.
+*/
+class Delib {
 public:
     /**
     * WLAN server used to handle wlan requests whenever WLAN is in use.
@@ -12,6 +21,12 @@ public:
     * Ethernet server used to handle ethernet requests whenever Ethernet is in use.
     */
     EthernetServer ethn_server = EthernetServer(80);
+
+    /**
+    * Data buffer received from the client upon ethernet request to the ethernet server. 
+    * `ethn_buffer` updates each tick so it need to be handled in `loop()` before `delib.update()` invoked.
+    */
+    String ethn_buffer = "";
 
     /**
     * Initialization method. Use it to start a proper server after pre-requirements have finished.
@@ -63,37 +78,62 @@ public:
 
             // start wlan server
             wlan_server.begin();
+
+            state = State::Wlan; // state to determine that wlan server is up
         }
         else { // ethernet connection established, so start `ethn_server`
             Serial.print("Connected, IP address: "); Serial.println(Ethernet.localIP());
             // start ethernet server
             ethn_server.begin();
+
+            state = State::Ethn; // state to determine that ethernet server is up
         }
     }
     /**
     * Main loop of `delib`. Handles client<>server communication if established.
     */
     void update() {
-        if (state == 0) { // ethernet client handling
+        // ethernet client handling
+        if (state == State::Ethn) {
             EthernetClient client = ethn_server.available();
             if (client) {
                 while (client.connected()) {
+                    // read client request data if available
                     if (client.available()) {
-                        // char c = client.read();
-                        // ethn_server.write(client.read());
-                        client.println("HTTP/1.1 200 OK");
-                        client.println("Content-Type: text/plain");
-                        client.println("Connection: close");
-                        client.println();
-                        client.println("response message");
+                        // read client data per byte
+                        char c = client.read();
+
+                        // if line sent by client has been ended, send a response
+                        if (c == '\n') {
+                            client.println("HTTP/1.1 200 OK");
+                            client.println("Content-Type: text/plain");
+                            client.println("Connection: close");
+                            client.println();
+                            client.println("OK");
+                            
+                            // print received data in serial [debug purposes]
+                            Serial.println(ethn_buffer);
+
+                            // clear client buffer
+                            ethn_buffer = "";
+                        }
+                        else { // otherwise add data to a buffer
+                            ethn_buffer += c;
+                        }
                     }
                 }
                 delay(1);
                 client.stop();
             }
         }
-        if (state == 1) { // wlan client handling
+        // wlan client handling
+        if (state == State::Wlan) {
             wlan_server.handleClient();
+        }
+        // if nothing to handle, print this message
+        if (state == State::Default) { 
+            Serial.println("No profile selected. Please check your firmware or service messages above.");
+            delay(100000);
         }
     }
     /**
@@ -102,10 +142,14 @@ public:
     * You can define device secret with a `set_secret(your_secret);`
     */
     bool auth_wlan_request() {
+        // return if wlan server is offline
+        if (state != State::Wlan) {
+            return false;
+        }
         if (wlan_server.method() == HTTP_POST) {
             Serial.println("Received POST");
         }
-        else {
+        else { // return user if received request has a wrong type 
             Serial.println("Wrong method");
             wlan_server.send(405, "text/plain", "Wrong method");
             return false;
@@ -114,7 +158,7 @@ public:
         if (wlan_server.arg("plain") == secret) {
             wlan_server.send(200, "text/plain", "Fine secret");
         }
-        else {
+        else { // return user if received secret is invalid. [check set_secret()]
             Serial.println("Bad secret");
             wlan_server.send(403, "text/plain", "Bad secret");
             return false;
@@ -129,7 +173,7 @@ public:
         wifi_key  = key;
     }
     /**
-    * Sets a device secret to decline requests with a different one. (WHALE by default)
+    * Sets a device secret used to authorize wlan requests. (WHALE by default)
     */
     void set_secret(String new_secret) {
         secret = new_secret;
@@ -138,10 +182,7 @@ private:
     // secret to validate wlan requests
     String secret = "WHALE";
 
-    // -1: default;
-    //  0: ethernet;
-    //  1: wlan;
-    int state = -1;
+    State state = State::Default;
 
     uint8_t bad_ip[4];
     uint8_t bad_mac[6];
