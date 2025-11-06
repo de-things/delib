@@ -1,6 +1,7 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
 #include <Ethernet.h>
+#include <LiquidCrystal_I2C.h>
     
 enum class State {
     Default,
@@ -30,64 +31,94 @@ public:
 
     /**
     * Initialization method. Use it to start a proper server after pre-requirements have finished.
+    * `mac` - device mac.
     */
-    void init(uint8_t mac[6]) {
+    void init(byte mac[6], String device_name) {
+        lcd.init();
+        lcd.backlight();
+
+        lcd_print("[DE:THINGS]", device_name, 2000);
+
+        lcd_print("[SERIAL]", "", 10);
+        
         Serial.begin(74880);
-        while (!Serial) {}
-
-        Serial.println();
-        delay(2000);
-
-        if (mac == bad_mac) {
-            Serial.println("Cannot use MAC address specified. Initialization failed.");
-            return;
+        while (!Serial) {
+            lcd.print(">");
         }
 
+        lcd_print("[SERIAL]", "OK", 1000);
+        Serial.println("Serial initialized");
+
+        lcd_print("[PROFILE]", "Ethernet", 2000);
         Serial.println("Selected Ethernet profile.");
 
-        delay(500);
+        if (Ethernet.hardwareStatus() == EthernetNoHardware) { // if no ethernet hardware, try to use wlan instead
+            lcd_print("[ERR]", "No eth hardware", 2000);
+            Serial.println("Ethernet hardware is not found.");
 
-        Ethernet.setMACAddress(mac);
-
-        if (Ethernet.begin(mac) == 0) { // if establishing ethernet returned `0` (error), try to use wlan instead
+            // call wlan init
+            wlan_init(mac);
+        }
+        else if (Ethernet.begin(mac) == 0) { // if establishing ethernet returned `0` (error), try to use wlan instead
+            lcd_print("[ERR]", "No cable found", 2000);
             Serial.println("Cannot access network through ethernet. Is cable plugged in?");
             Serial.println();
-            Serial.println("Selected WLAN profile."); 
-
-            delay(500);
-
-            if (wifi_ssid == "") { // return if no ssid specified.
-                Serial.println("SSID is empty. Have you tried to use set_wifi_credentials(ssid, key) before init(mac) to define wifi credentials?"); 
-                return;
-            }
-
-            WiFi.mode(WIFI_STA);
-            wifi_set_macaddr(STATION_IF, mac);
-            WiFi.begin(wifi_ssid, wifi_key); // begin the connection to specified wlan
-
-            Serial.print("Connecting to "); Serial.println(wifi_ssid);
-
-            while (WiFi.status() != WL_CONNECTED)
-            {
-                delay(500);
-                Serial.print(".");
-            }
-            Serial.println();
-
-            Serial.print("Connected, IP address: "); Serial.println(WiFi.localIP());
-
-            // start wlan server
-            wlan_server.begin();
-
-            state = State::Wlan; // state to determine that wlan server is up
+            
+            // call wlan init
+            wlan_init(mac);
         }
         else { // ethernet connection established, so start `ethn_server`
+            lcd_print("[ETH]", "OK", 1000);
+
+            lcd_print("[IP]", ip_to_string(Ethernet.localIP()), 10);
             Serial.print("Connected, IP address: "); Serial.println(Ethernet.localIP());
+
             // start ethernet server
             ethn_server.begin();
 
             state = State::Ethn; // state to determine that ethernet server is up
         }
+    }
+    /**
+    * Initialization method for WLAN Profile. Use `delib.init()` instead if you want to check and init ethernet profile as well. 
+    * If `init()` fails to initialize ethernet profile, this method will be called automatically.
+    */
+    void wlan_init(byte mac[]) {
+        lcd_print("[PROFILE]", "WLAN", 2000);
+        Serial.println("Selected WLAN profile."); 
+
+        delay(500);
+
+        if (wifi_ssid == "") { // return if no ssid specified.
+            lcd_print("[ERR]", "Empty SSID", 2000);
+            Serial.println("SSID is empty. Have you tried to use set_wifi_credentials(ssid, key) before init(mac) to define wifi credentials?"); 
+            return;
+        }
+
+        WiFi.mode(WIFI_STA);
+        wifi_set_macaddr(STATION_IF, mac);
+        WiFi.begin(wifi_ssid, wifi_key); // begin the connection to specified wlan
+
+        lcd_print(wifi_ssid, "", 10);
+        Serial.print("Connecting to "); Serial.println(wifi_ssid);
+
+        while (WiFi.status() != WL_CONNECTED)
+        {
+            lcd.print(">");
+            Serial.print(".");
+            delay(500);
+        }
+        Serial.println();
+
+        lcd_print("[WLAN]", "OK", 1000);
+
+        lcd_print("[IP]", ip_to_string(WiFi.localIP()), 10);
+        Serial.print("Connected, IP address: "); Serial.println(WiFi.localIP());
+
+        // start wlan server
+        wlan_server.begin();
+
+        state = State::Wlan; // state to determine that wlan server is up
     }
     /**
     * Main loop of `delib`. Handles client<>server communication if established.
@@ -132,6 +163,7 @@ public:
         }
         // if nothing to handle, print this message
         if (state == State::Default) { 
+            lcd_print("[ERR]", "No profile", 10);
             Serial.println("No profile selected. Please check your firmware or service messages above.");
             delay(100000);
         }
@@ -149,7 +181,7 @@ public:
             return false;
         }
         if (wlan_server.method() == HTTP_POST) {
-            Serial.println("Received POST");
+            Serial.println("RECEIVED POST");
         }
         else { // return user if received request has a wrong type 
             Serial.println("WRONG METHOD");
@@ -167,7 +199,7 @@ public:
         }
         else { // return user if received secret is invalid. [check set_secret()]
             Serial.println("BAD SECRET");
-            wlan_server.send(403, "text/plain", "BAD SECRET");
+            wlan_server.send(403, "text/plain", "ERROR");
             return false;
         }
         return true;
@@ -185,14 +217,48 @@ public:
     void set_secret(String new_secret) {
         secret = new_secret;
     }
+    /**
+    * Prints something on lcd screen. 
+    * `row_0` - message to first row;
+    * `row_1` - message to second row;
+    * `delay_time` - time to wait before continue firmware execution.
+    */
+    void lcd_print(String row_0, String row_1, int delay_time) {
+        lcd_clear();
+
+        lcd.setCursor(0, 0);
+        lcd.print(row_0);
+        lcd.setCursor(0, 1);
+        lcd.print(row_1);
+
+        delay(delay_time);
+    }
+    /**
+    * Clears lcd screen. 
+    */
+    void lcd_clear() {
+        lcd.setCursor(0, 0);
+        lcd.print("                ");
+        lcd.setCursor(0, 1);
+        lcd.print("                ");
+    }
+    /**
+    * Converts ip[] to String.
+    */
+    String ip_to_string(IPAddress ip)
+    {
+    return String(ip[0]) + "." + 
+            String(ip[1]) + "." + 
+            String(ip[2]) + "." + 
+            String(ip[3]);
+    }
 private:
+    LiquidCrystal_I2C lcd = LiquidCrystal_I2C(0x3F, 16, 2);
+
     // secret to validate wlan requests
     String secret = "WHALE";
 
     State state = State::Default;
-
-    uint8_t bad_ip[4];
-    uint8_t bad_mac[6];
 
     // ssid, key
     String wifi_ssid = "";
