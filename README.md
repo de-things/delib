@@ -14,14 +14,13 @@ C:\Users\your_username\Documents\Arduino\libraries\delib\delib.h
 ### Example relay firmware source
 ```cpp
 // firmware.ino
-
 #include <delib.h>
 
 #define RELAY_PIN 14
 
 bool enabled = false;
 
-byte mac[] = { 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA };
+byte mac[] = { 0x15, 0x15, 0x15, 0x15, 0x15, 0x15 };
 
 Delib delib = Delib();
 
@@ -30,7 +29,6 @@ void on() {
     digitalWrite(RELAY_PIN, HIGH);
     enabled = true;
   }
-  
 }
 void off() {
   if (delib.auth_wlan_request()) {
@@ -49,23 +47,19 @@ void state() {
 void setup() {
   pinMode(RELAY_PIN, OUTPUT);
 
-  // wlan handlers
-  delib.wlan_server.on("/on", on);
-  delib.wlan_server.on("/off", off);
-  delib.wlan_server.on("/state", state);
+  delib.server.on("/on", on);
+  delib.server.on("/off", off);
+  delib.server.on("/state", state);
 
-  // wlan credentials
-  delib.set_wifi_credentials("ssid", "key");
+  delib.set_wifi_credentials("Keenetic-5244", "NKzyTZJN");
+  delib.set_device_name("GUInea Pig");
 
-  // lib init
-  delib.init(mac, "some device");
+  delib.init(mac);
 }
 
 void loop() {
-  // lib update
   delib.update();
 }
-
 ```
 
 ### Example relay scheme
