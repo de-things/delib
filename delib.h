@@ -135,13 +135,15 @@ public:
             Serial.println("No profile selected. Please check your firmware or service messages above.");
             delay(100000);
         }
+        delay(1);
     }
     /**
     * Returns true if client's wlan request is valid (POST and has a proper SECRET). 
     * Use it in wlan client handlers to decline unauthorized requests.
     * You can define device secret with a `set_secret(your_secret);`
+    * `response` - message to be sent if auth confirmed ("OK" by default).
     */
-    bool auth_wlan_request() {
+    bool auth_wlan_request(String response = "") {
         // return if wlan server is offline
         if (state != State::Wlan) {
             return false;
@@ -150,17 +152,22 @@ public:
             Serial.println("Received POST");
         }
         else { // return user if received request has a wrong type 
-            Serial.println("Wrong method");
-            wlan_server.send(405, "text/plain", "Wrong method");
+            Serial.println("WRONG METHOD");
+            wlan_server.send(405, "text/plain", "WRONG METHOD");
             return false;
         }
 
         if (wlan_server.arg("plain") == secret) {
-            wlan_server.send(200, "text/plain", "Fine secret");
+            if (response == "") {
+                wlan_server.send(200, "text/plain", "OK");
+            }
+            else {
+                wlan_server.send(200, "text/plain", response);
+            }
         }
         else { // return user if received secret is invalid. [check set_secret()]
-            Serial.println("Bad secret");
-            wlan_server.send(403, "text/plain", "Bad secret");
+            Serial.println("BAD SECRET");
+            wlan_server.send(403, "text/plain", "BAD SECRET");
             return false;
         }
         return true;
