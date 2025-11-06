@@ -1,6 +1,6 @@
 > [!IMPORTANT]
 > This version of lib **doesn't** work with Ethernet standard, since `Troyka-WiFi` isn't designed this way.
-> This branch especially written for `Troyka-WiFi` if will be ever needed, but **won't be maintained anymore**.
+> This branch is designed especially for `Troyka-WiFi` based on `ESP8266 [ESP-12]` controller.
 
 ### Summary
 Core network lib to communicate with server side of de:things devices.
