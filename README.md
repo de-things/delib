@@ -85,4 +85,4 @@ Next step is download `LiquidCrystal_I2C` lib from [here](https://iarduino.ru/li
 C:\Users\your_username\Documents\Arduino\libraries\
 ```
 
-After steps above you most likely to flash your `Troyka-WiFi`. Compilier can throw an exception of missing `Ethernet.h` with no reason. If so, download this lib as well. But don't do it if everything compiles and flashes normally, you can face the lib duplicate otherwise.
+After steps above you most likely to flash your `Troyka-WiFi`. Compilier can throw an exception of missing `Ethernet.h` with no reason. If so, download this lib and install in local libraries directory as well. But don't do this if everything compiles and flashes normally, you can face the lib duplicate otherwise.
