@@ -37,7 +37,7 @@ public:
         lcd.init();
         lcd.backlight();
 
-        lcd_print("[DE:THINGS]", device_name, 2000);
+        lcd_print("[INIT]", device_name, 2000);
 
         lcd_print("[SERIAL]", "", 10);
         
@@ -49,28 +49,28 @@ public:
         lcd_print("[SERIAL]", "OK", 1000);
         Serial.println("Serial initialized");
 
-        lcd_print("[PROFILE]", "Ethernet", 2000);
+        lcd_print("[SELECTED]", "ETH", 2000);
         Serial.println("Selected Ethernet profile.");
 
         if (Ethernet.hardwareStatus() == EthernetNoHardware) { // if no ethernet hardware, try to use wlan instead
-            lcd_print("[ERR]", "No eth hardware", 2000);
+            lcd_print("[ERR]", "NO HARDWARE", 2000);
             Serial.println("Ethernet hardware is not found.");
 
             // call wlan init
-            wlan_init(mac);
+            wlan_init(mac, device_name);
         }
         else if (Ethernet.begin(mac) == 0) { // if establishing ethernet returned `0` (error), try to use wlan instead
-            lcd_print("[ERR]", "No cable found", 2000);
-            Serial.println("Cannot access network through ethernet. Is cable plugged in?");
+            lcd_print("[ERR]", "ETH_DHCP FAILED", 2000);
+            Serial.println("Cannot access network through ethernet. Is cable plugged in or DHCP can provide an IP?");
             Serial.println();
             
             // call wlan init
-            wlan_init(mac);
+            wlan_init(mac, device_name);
         }
         else { // ethernet connection established, so start `ethn_server`
             lcd_print("[ETH]", "OK", 1000);
 
-            lcd_print("[IP]", ip_to_string(Ethernet.localIP()), 10);
+            lcd_print("[IP] " + device_name, ip_to_string(Ethernet.localIP()), 10);
             Serial.print("Connected, IP address: "); Serial.println(Ethernet.localIP());
 
             // start ethernet server
@@ -78,47 +78,6 @@ public:
 
             state = State::Ethn; // state to determine that ethernet server is up
         }
-    }
-    /**
-    * Initialization method for WLAN Profile. Use `delib.init()` instead if you want to check and init ethernet profile as well. 
-    * If `init()` fails to initialize ethernet profile, this method will be called automatically.
-    */
-    void wlan_init(byte mac[]) {
-        lcd_print("[PROFILE]", "WLAN", 2000);
-        Serial.println("Selected WLAN profile."); 
-
-        delay(500);
-
-        if (wifi_ssid == "") { // return if no ssid specified.
-            lcd_print("[ERR]", "Empty SSID", 2000);
-            Serial.println("SSID is empty. Have you tried to use set_wifi_credentials(ssid, key) before init(mac) to define wifi credentials?"); 
-            return;
-        }
-
-        WiFi.mode(WIFI_STA);
-        wifi_set_macaddr(STATION_IF, mac);
-        WiFi.begin(wifi_ssid, wifi_key); // begin the connection to specified wlan
-
-        lcd_print(wifi_ssid, "", 10);
-        Serial.print("Connecting to "); Serial.println(wifi_ssid);
-
-        while (WiFi.status() != WL_CONNECTED)
-        {
-            lcd.print(">");
-            Serial.print(".");
-            delay(500);
-        }
-        Serial.println();
-
-        lcd_print("[WLAN]", "OK", 1000);
-
-        lcd_print("[IP]", ip_to_string(WiFi.localIP()), 10);
-        Serial.print("Connected, IP address: "); Serial.println(WiFi.localIP());
-
-        // start wlan server
-        wlan_server.begin();
-
-        state = State::Wlan; // state to determine that wlan server is up
     }
     /**
     * Main loop of `delib`. Handles client<>server communication if established.
@@ -263,4 +222,45 @@ private:
     // ssid, key
     String wifi_ssid = "";
     String wifi_key  = "";
+
+    /**
+    * Private init method for WLAN Profile. It's separated with `init()`, because used multiple times in `init()`.
+    */
+    void wlan_init(byte mac[], String device_name) {
+        lcd_print("[SELECTED]", "WLAN", 2000);
+        Serial.println("Selected WLAN profile."); 
+
+        delay(500);
+
+        if (wifi_ssid == "") { // return if no ssid specified.
+            lcd_print("[ERR]", "Empty SSID", 2000);
+            Serial.println("SSID is empty. Have you tried to use set_wifi_credentials(ssid, key) before init(mac) to define wifi credentials?"); 
+            return;
+        }
+
+        WiFi.mode(WIFI_STA);
+        wifi_set_macaddr(STATION_IF, mac);
+        WiFi.begin(wifi_ssid, wifi_key); // begin the connection to specified wlan
+
+        lcd_print(wifi_ssid, "", 10);
+        Serial.print("Connecting to "); Serial.println(wifi_ssid);
+
+        while (WiFi.status() != WL_CONNECTED)
+        {
+            lcd.print(".");
+            Serial.print(".");
+            delay(500);
+        }
+        Serial.println();
+
+        lcd_print("[WLAN]", "OK", 1000);
+
+        lcd_print("[IP] " + device_name, ip_to_string(WiFi.localIP()), 10);
+        Serial.print("Connected, IP address: "); Serial.println(WiFi.localIP());
+
+        // start wlan server
+        wlan_server.begin();
+
+        state = State::Wlan; // state to determine that wlan server is up
+    }
 };
