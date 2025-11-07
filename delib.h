@@ -169,6 +169,9 @@ private:
     String ssid = "";
     String key  = "";
 
+    // animation frame for lcd connection process
+    int anim_frame = 0;
+
     String device_name = "Smart Device";
 
     IPAddress old_ip = IPAddress(0,0,0,0);
@@ -208,9 +211,20 @@ private:
                 return;
             }
 
-            lcd.print(".");
+            // dots animation for connection process
+            if (anim_frame >= 3) {
+                lcd.setCursor(0, 1);
+                lcd.print("   ");
+                lcd.setCursor(0, 1);
+                anim_frame = 0;
+            }
+            else {
+                lcd.print(".");
+                anim_frame += 1;
+            }
+
             Serial.print(".");
-            delay(500);
+            delay(200);
         }
 
         lcd_print("[WLAN]", "OK", 1000);
