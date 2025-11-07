@@ -67,9 +67,6 @@ public:
                 // show state message after wlan re-initialization
                 show_state_message();
             }
-            // update ip info calling this method 
-            // if old and new ip are different
-            show_ip_message();
         }
         delay(1);
     }
@@ -172,9 +169,7 @@ private:
     // animation frame for lcd connection process
     int anim_frame = 0;
 
-    String device_name = "Smart Device";
-
-    IPAddress old_ip = IPAddress(0,0,0,0);
+    String device_name = "Cardboard";
 
     /**
     * Attempts to connect to WiFi with ssid and key specified.
@@ -230,25 +225,18 @@ private:
         lcd_print("[WLAN]", "OK", 1000);
 
         state = State::Wlan; // state to determine that wlan server is up
-        
+
         // start wlan server
         server.begin();
     }
     void show_state_message() {
         if (state == State::Wlan) {
-            // show ip info
-            show_ip_message();
+            lcd_print("[IP] " + device_name, ip_to_string(WiFi.localIP()), 1);
+            Serial.print("\nConnected, IP address: "); Serial.println(WiFi.localIP());
         }
         else if (state == State::Default) { // print this message otherwise
             lcd_print("[ERR]", "NO CONNECTION", 10);
             Serial.println("Connection cannot be established. Please check service messages above.");
-        }
-    }
-    void show_ip_message() {
-        if (old_ip != WiFi.localIP()) {
-            lcd_print("[IP] " + device_name, ip_to_string(WiFi.localIP()), 1);
-            Serial.print("\nConnected, IP address: "); Serial.println(WiFi.localIP());
-            old_ip = WiFi.localIP();
         }
     }
 };
