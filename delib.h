@@ -230,13 +230,14 @@ private:
         lcd_print("[WLAN]", "OK", 1000);
 
         state = State::Wlan; // state to determine that wlan server is up
+        
+        // start wlan server
+        server.begin();
     }
     void show_state_message() {
         if (state == State::Wlan) {
             // show ip info
             show_ip_message();
-            // start wlan server
-            server.begin();
         }
         else if (state == State::Default) { // print this message otherwise
             lcd_print("[ERR]", "NO CONNECTION", 10);
