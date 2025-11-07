@@ -41,7 +41,7 @@ public:
         wifi_set_macaddr(STATION_IF, mac);
 
         // establish connection to a specified wlan
-        wifi_begin(ssid, key);
+        wifi_begin();
 
         // show state message after wlan initialization
         show_state_message();
@@ -62,11 +62,14 @@ public:
                 Serial.println("Disconnected.");
 
                 // establish connection to a specified wlan
-                wifi_begin(ssid, key);
+                wifi_begin();
 
                 // show state message after wlan re-initialization
                 show_state_message();
             }
+            // update ip info calling this method 
+            // if old and new ip are different
+            show_ip_message();
         }
         delay(1);
     }
@@ -111,8 +114,8 @@ public:
     * `key` - WiFi password.
     */
     void set_wifi_credentials(String wlan_ssid, String wlan_key) {
-        ssid = ssid;
-        key  = key;
+        ssid = wlan_ssid;
+        key  = wlan_key;
     }
     /**
     * Sets a device secret used to authorize wlan requests. (WHALE by default)
@@ -168,32 +171,40 @@ private:
 
     String device_name = "Smart Device";
 
+    IPAddress old_ip = IPAddress(0,0,0,0);
+
     /**
     * Attempts to connect to WiFi with ssid and key specified.
     */
-    void wifi_begin(String wlan_ssid, String wlan_key) {
-        WiFi.begin(wlan_ssid, wlan_key);
+    void wifi_begin() {
+        WiFi.begin(ssid, key);
 
-        lcd_print(wlan_ssid, "", 10);
-        Serial.print("Connecting to "); Serial.println(wlan_ssid);
+        lcd_print(ssid, "", 10);
+        Serial.print("Connecting to "); Serial.println(ssid);
 
         while (WiFi.status() != WL_CONNECTED)
         {
             if (WiFi.status() == WL_WRONG_PASSWORD) {
-                lcd_print("[ERR]", "WRONG KEY", 5000);
-                Serial.print("Key is invalid. Connection failed.");
+                lcd_print("[ERR]", "INVALID KEY", 5000);
+                Serial.println("\nKey is invalid. Connection failed.");
                 return;
             }
 
             if (WiFi.status() == WL_NO_SSID_AVAIL) {
-                lcd_print("[ERR]", "WRONG SSID", 5000);
-                Serial.print("SSID is invalid. Connection failed.");
+                lcd_print("[ERR] IS 2.4GHZ?", "NO SSID AVAIL", 5000);
+                Serial.println("\nSSID is not available. Is it 2.4GHz? Connection failed.");
+
+                // retry again
+                wifi_begin();
                 return;
             }
 
             if (WiFi.status() == WL_CONNECT_FAILED) {
                 lcd_print("[ERR]", "FAILED", 5000);
-                Serial.print("Somethinig went wrong. Connection failed.");
+                Serial.println("\nSomethinig went wrong. Connection failed.");
+
+                // retry again
+                wifi_begin();
                 return;
             }
 
@@ -208,16 +219,21 @@ private:
     }
     void show_state_message() {
         if (state == State::Wlan) {
-            lcd_print("[IP] " + device_name, ip_to_string(WiFi.localIP()), 10);
-            Serial.print("Connected, IP address: "); Serial.println(WiFi.localIP());
-
+            // show ip info
+            show_ip_message();
             // start wlan server
             server.begin();
         }
         else if (state == State::Default) { // print this message otherwise
             lcd_print("[ERR]", "NO CONNECTION", 10);
             Serial.println("Connection cannot be established. Please check service messages above.");
-            for (;;); // an infinite loop to prevent further code execution
+        }
+    }
+    void show_ip_message() {
+        if (old_ip != WiFi.localIP()) {
+            lcd_print("[IP] " + device_name, ip_to_string(WiFi.localIP()), 1);
+            Serial.print("\nConnected, IP address: "); Serial.println(WiFi.localIP());
+            old_ip = WiFi.localIP();
         }
     }
 };
