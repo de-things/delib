@@ -14,7 +14,7 @@ C:\Users\your_username\Documents\Arduino\libraries\delib\delib.h
 ### Example relay firmware source
 ```cpp
 // firmware.ino
-#include <delib.h>
+#include <delib-wlan.h>
 
 #define RELAY_PIN 14
 
@@ -22,7 +22,7 @@ bool enabled = false;
 
 byte mac[] = { 0x15, 0x15, 0x15, 0x15, 0x15, 0x15 };
 
-Delib delib = Delib();
+DelibWlan delib = DelibWlan();
 
 void on() {
   if (delib.auth_wlan_request()) {

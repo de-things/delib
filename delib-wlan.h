@@ -7,7 +7,7 @@ enum class State { Default, Wlan };
 /**
 * Core network lib class to handle server side of de:things devices.
 */
-class Delib {
+class DelibWlan {
 public:
     /**
     * WLAN server used to handle wlan requests whenever WLAN is in use.
@@ -120,6 +120,9 @@ public:
     void set_secret(String new_secret) {
         secret = new_secret;
     }
+    /**
+    * Sets device name.
+    */
     void set_device_name(String name) {
         device_name = name;
     }
@@ -172,7 +175,7 @@ private:
     String device_name = "Cardboard";
 
     /**
-    * Attempts to connect to WiFi with ssid and key specified.
+    * Attempts connect to WiFi with ssid and key specified.
     */
     void wifi_begin() {
         WiFi.begin(ssid, key);
