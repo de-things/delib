@@ -53,6 +53,7 @@ public:
             else {
                 if (buffer != "") {
                     old_buffer = buffer;
+                    // "clear" buffer after clonning a value to `old_buffer`
                     buffer = "";
                 }
                 client.stop();
@@ -71,7 +72,7 @@ public:
         }
         else { // set result as buffer if client is not sending anything
             result = &old_buffer;
-            // clear `old_buffer` after pointing to the `result`
+            // "clear" `old_buffer` after pointing to the `result`
             old_buffer = "";
         }
         return true;
