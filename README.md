@@ -1,5 +1,5 @@
 > [!IMPORTANT]
-> Don't `#include` both libs at once, since wlan lib compiles under esp8266 controller and ethernet one for general arduino uno with ethernet interface installed.
+> Don't `#include` both lib classes at once, since Wlan lib compiles under esp8266 controller and Ethernet one for general Arduino Uno with ethernet interface installed.
 > It potentially can work together if some controller has both interfaces to communicate with wlan and ethernet, but I didn't test it.
 > 
 > This lib most likely written and tested for Troyka modules by [amperka.ru](https://amperka.ru/)
