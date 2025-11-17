@@ -55,6 +55,7 @@ public:
                     old_buffer = buffer;
                     buffer = "";
                 }
+                client.stop();
             }
         }
         delay(1);
@@ -64,12 +65,12 @@ public:
     * Returns `false` if client is sending something at the moment,
     * `true` otherwise.
     */
-    bool get_buffer(String *result) {
+    bool get_buffer(String* result) {
         if (server.available()) {
             return false;
         }
         else { // set result as buffer if client is not sending anything
-            result = old_buffer;
+            result = &old_buffer;
             // clear `old_buffer` after pointing to the `result`
             old_buffer = "";
         }
