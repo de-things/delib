@@ -1,6 +1,8 @@
 > [!IMPORTANT]
-> This version of lib **doesn't** work with Ethernet standard, since `Troyka-WiFi` isn't designed this way.
-> This branch is designed especially for `Troyka-WiFi` based on `ESP8266 [ESP-12]` controller.
+> Don't import both libs at once, since wlan lib compiles for esp8266 controller and eth one for general arduino uno with ethernet shield installed.
+> It potentially can work together if some controller has both interfaces to communicate with wlan and ethernet, but I didn't test it.
+> 
+> This lib most likely written and tested for Troyka modules by [amperka.ru](https://amperka.ru/)
 
 ### Summary
 Core network lib to communicate with server side of de:things devices.
@@ -11,7 +13,7 @@ Clone repo into local arduino librares folder. Lib file should be located like:
 C:\Users\your_username\Documents\Arduino\libraries\delib\delib.h
 ```
 
-### Example relay firmware source
+### Example wlan relay firmware source
 ```cpp
 // firmware.ino
 #include <delib-wlan.h>
@@ -62,13 +64,13 @@ void loop() {
 }
 ```
 
-### Example relay scheme
+### Example wlan relay scheme
 ![example-wifi-relay-scheme](https://github.com/user-attachments/assets/c34ca3f8-a9e1-4a15-97f0-e99f59af8ad3)
 
 ### How to deploy example relay firmware
 You need to install ESP8266 board [deps](https://github.com/esp8266/Arduino) and select `Generic ESP8266 Module` as a board to flash after deps has been installed. If deps link is unavailable for some reason, just find a board expansion for Arduino IDE to flash ESP8266-based controllers.
 
-### Hardware used in example relay scheme
+### Hardware used in example wlan relay scheme
 * [Troyka WiFi](https://wiki.amperka.ru/%D0%BF%D1%80%D0%BE%D0%B4%D1%83%D0%BA%D1%82%D1%8B:troyka-wi-fi)
 * [Mini-Relay](https://wiki.amperka.ru/%D0%BF%D1%80%D0%BE%D0%B4%D1%83%D0%BA%D1%82%D1%8B:troyka-mini-relay)
 * [Arduino Uno](https://amperka.ru/product/arduino-uno)
