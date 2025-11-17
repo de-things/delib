@@ -1,7 +1,5 @@
 #include <Ethernet.h>
 #include <LiquidCrystal_I2C.h>
-    
-enum class State { Default, Ethernet };
 
 /**
 * Core network lib class to handle server side of de:things devices.
@@ -111,13 +109,16 @@ public:
     }
 private:
     /**
-    * WLAN server used to handle wlan requests whenever WLAN is in use.
+    * 金属片の州
     */
+    enum class State { Default, Ethernet };
+
+    // state handler
+    State state = State::Default;
+
     EthernetServer server = EthernetServer(80);
 
     LiquidCrystal_I2C lcd = LiquidCrystal_I2C(0x3F, 16, 2);
-
-    State state = State::Default;
 
     String device_name = "Cardboard";
 

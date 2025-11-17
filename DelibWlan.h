@@ -1,8 +1,6 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
 #include <LiquidCrystal_I2C.h>
-    
-enum class State { Default, Wlan };
 
 /**
 * Core network lib class to handle server side of de:things devices.
@@ -10,7 +8,7 @@ enum class State { Default, Wlan };
 class DelibWlan {
 public:
     /**
-    * WLAN server used to handle wlan requests whenever WLAN is in use.
+    * WLAN server instance. Use it to handle events.
     */
     ESP8266WebServer server = ESP8266WebServer(80);
 
@@ -158,12 +156,18 @@ public:
         return String(ip[0]) + "." + String(ip[1]) + "." + String(ip[2]) + "." + String(ip[3]);
     }
 private:
+    /**
+    * 金属片の州
+    */
+    enum class State { Default, Wlan };
+
+    // state handler
+    State state = State::Default;
+
     LiquidCrystal_I2C lcd = LiquidCrystal_I2C(0x3F, 16, 2);
 
     // secret to validate wlan requests
     String secret = "WHALE";
-
-    State state = State::Default;
 
     // ssid, key
     String ssid = "";
