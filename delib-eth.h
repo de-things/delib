@@ -59,13 +59,18 @@ public:
         }
         delay(1);
     }
+    /** 
+    * Points to the last received buffered message from a client. 
+    * Returns `false` if client is sending something at the moment,
+    * `true` otherwise.
+    */
     bool get_buffer(String *result) {
         if (server.available()) {
             return false;
         }
         else { // set result as buffer if client is not sending anything
             result = old_buffer;
-            // clear `old_buffer` after sending it to `result`
+            // clear `old_buffer` after pointing to the `result`
             old_buffer = "";
         }
         return true;
