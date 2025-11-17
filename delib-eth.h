@@ -48,11 +48,27 @@ public:
         if (state == State::Ethernet) {
             EthernetClient client = server.available();
             if (client) {
-                server.write(client.read());
-                Serial.print(client.read());
+                buffer += client.read();
+            }
+            else {
+                if (buffer != "") {
+                    old_buffer = buffer;
+                    buffer = "";
+                }
             }
         }
         delay(1);
+    }
+    bool get_buffer(String *result) {
+        if (server.available()) {
+            return false;
+        }
+        else { // set result as buffer if client is not sending anything
+            result = old_buffer;
+            // clear `old_buffer` after sending it to `result`
+            old_buffer = "";
+        }
+        return true;
     }
     /**
     * Sets device name. 
@@ -97,6 +113,9 @@ private:
     State state = State::Default;
 
     String device_name = "Cardboard";
+
+    String buffer = "";
+    String old_buffer = "";
 
     /**
     * Attempts connect to Eth.
