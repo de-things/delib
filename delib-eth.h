@@ -53,7 +53,7 @@ public:
             else {
                 if (buffer != "") {
                     old_buffer = buffer;
-                    // "clear" buffer after clonning a value to `old_buffer`
+                    // "clear" buffer after clonning to the `old_buffer`
                     buffer = "";
                 }
                 client.stop();
