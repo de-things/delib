@@ -9,11 +9,6 @@ enum class State { Default, Ethernet };
 class DelibEthernet {
 public:
     /**
-    * WLAN server used to handle wlan requests whenever WLAN is in use.
-    */
-    EthernetServer server = EthernetServer(80);
-
-    /**
     * Initialization method. Use it to start a proper server after pre-requirements have finished.
     * `mac` - device mac.
     */
@@ -115,6 +110,11 @@ public:
         return String(ip[0]) + "." + String(ip[1]) + "." + String(ip[2]) + "." + String(ip[3]);
     }
 private:
+    /**
+    * WLAN server used to handle wlan requests whenever WLAN is in use.
+    */
+    EthernetServer server = EthernetServer(80);
+
     LiquidCrystal_I2C lcd = LiquidCrystal_I2C(0x3F, 16, 2);
 
     State state = State::Default;
