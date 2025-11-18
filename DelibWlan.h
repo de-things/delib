@@ -131,7 +131,7 @@ public:
     * `delay_time` - time to wait before continue firmware execution.
     */
     void lcd_print(String row_0, String row_1, int delay_time) {
-        lcd_clear();
+        lcd.clear();
 
         lcd.setCursor(0, 0);
         lcd.print(row_0);
@@ -139,15 +139,6 @@ public:
         lcd.print(row_1);
 
         delay(delay_time);
-    }
-    /**
-    * Clears lcd screen. 
-    */
-    void lcd_clear() {
-        lcd.setCursor(0, 0);
-        lcd.print("                ");
-        lcd.setCursor(0, 1);
-        lcd.print("                ");
     }
     /**
     * Converts ip[] to String.
