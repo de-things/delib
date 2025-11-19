@@ -162,9 +162,8 @@ public:
         return String(ip[0]) + "." + String(ip[1]) + "." + String(ip[2]) + "." + String(ip[3]);
     }
 private:
-    /**
-    * 金属片の州
-    */
+
+    // 州
     enum class State { Default, Wlan };
 
     // state handler
@@ -176,8 +175,8 @@ private:
     LiquidCrystal_I2C lcd = LiquidCrystal_I2C(0,0,0);
     
     byte lcd_addr = 0x3F;
-    int lcd_cols = 16;
-    int lcd_rows = 2;
+    int  lcd_cols = 16;
+    int  lcd_rows = 2;
     // --- 
 
     // secret to validate wlan requests
