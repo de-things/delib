@@ -8,9 +8,13 @@ class DelibEthernet {
 public:
     /**
     * Initialization method. Use it to start a proper server after pre-requirements have finished.
-    * `mac` - device mac.
+    * `mac` - Any MAC address for a device.
     */
     void init(byte mac[6]) {
+        _mac[0] = mac; // save mac data for later
+
+        lcd = LiquidCrystal_I2C(lcd_addr, lcd_cols, lcd_rows);
+
         lcd.init();
         lcd.backlight();
 
@@ -77,11 +81,25 @@ public:
                 delay(1);
                 client.stop();
             }
+
+            // detect disconnect 
+            // only for W5200, W5500 Ethernet interfaces. 
+            // `Ampreka` ethernet shield use something unique, so it doesn't work with it,
+            // but `iarduino` shield for an example has W5500 configuration so I suppose it works this way.
+            if (Ethernet.linkStatus() == LinkOFF) {
+                lcd_print("[ERR]", "DISCONNECTED", 2000);
+                Serial.println("Connection lost.");
+                state == State::Default;
+            }
+        }
+        else {
+            // try to reconnect using ethernet interface
+            eth_begin(_mac);
         }
         delay(1);
     }
     /** 
-    * Returns latest buffered command received from client.
+    * Returns latest buffered command received from a client.
     */
     String get_command() {
         if (is_reading_client) {
@@ -93,9 +111,21 @@ public:
     }
     /**
     * Sets device name. 
+    * `name` - Any name for a device (Cardboard by default).
     */
     void set_device_name(String name) {
         device_name = name;
+    }
+    /**
+    * Sets attributes for lcd screen connected to the controller.
+    * `addr` - logical address to send and show data on screen (1602 16x2 lcd screen uses 0x3F address for this);
+    * `cols` - number of columns screen owns;
+    * `rows` - number of rows screen owns.
+    */
+    void set_lcd_attributes(byte addr, int cols, int rows) {
+        lcd_addr = addr;
+        lcd_cols = cols;
+        lcd_rows = rows;
     }
     /**
     * Prints something on lcd screen. 
@@ -128,11 +158,18 @@ private:
     // state handler
     State state = State::Default;
 
-    EthernetServer server = EthernetServer(80);
-
-    LiquidCrystal_I2C lcd = LiquidCrystal_I2C(0x3F, 16, 2);
-
     String device_name = "Cardboard";
+
+    // --- lcd screen ---
+    LiquidCrystal_I2C lcd = LiquidCrystal_I2C(0,0,0);
+    
+    byte lcd_addr = 0x3F;
+    int lcd_cols = 16;
+    int lcd_rows = 2;
+    // --- 
+
+    byte _mac[6];
+    EthernetServer server = EthernetServer(80);
 
     String command = "";
 
@@ -140,9 +177,10 @@ private:
     char cmd_char = '!';
 
     bool is_reading_client = false;
+    
 
     /**
-    * Attempts connect to Eth.
+    * Attempts connect via Ethernet interface.
     */
     void eth_begin(byte mac[6]) {
         lcd_print("[STATUS]", "CONNECTING...", 1);
@@ -162,6 +200,9 @@ private:
         }
     }
 
+    /**
+    * Shows current connection state message.
+    */
     void show_state_message() {
         if (state == State::Ethernet) {
             lcd_print("[IP] " + device_name, ip_to_string(Ethernet.localIP()), 1);

@@ -14,9 +14,11 @@ public:
 
     /**
     * Initialization method. Use it to start a proper server after pre-requirements have finished.
-    * `mac` - device mac.
+    * `mac` - Any MAC address for a device.
     */
     void init(byte mac[6]) {
+        lcd = LiquidCrystal_I2C(lcd_addr, lcd_cols, lcd_rows);
+
         lcd.init();
         lcd.backlight();
 
@@ -113,16 +115,29 @@ public:
         key  = wlan_key;
     }
     /**
-    * Sets a device secret used to authorize wlan requests. (WHALE by default)
+    * Sets a device secret used to authorize wlan requests. 
+    * `new_secret` - Any secret phrase to be used by `auth_wlan_request(response);` (WHALE by default).
     */
     void set_secret(String new_secret) {
         secret = new_secret;
     }
     /**
-    * Sets device name.
+    * Sets device name. 
+    * `name` - Any name for a device (Cardboard by default).
     */
     void set_device_name(String name) {
         device_name = name;
+    }
+    /**
+    * Sets attributes for lcd screen connected to the controller.
+    * `addr` - logical address to send and show data on screen (1602 16x2 lcd screen owns 0x3F address for this);
+    * `cols` - number of columns screen owns;
+    * `rows` - number of rows screen owns.
+    */
+    void set_lcd_attributes(byte addr, int cols, int rows) {
+        lcd_addr = addr;
+        lcd_cols = cols;
+        lcd_rows = rows;
     }
     /**
     * Prints something on lcd screen. 
@@ -155,7 +170,15 @@ private:
     // state handler
     State state = State::Default;
 
-    LiquidCrystal_I2C lcd = LiquidCrystal_I2C(0x3F, 16, 2);
+    String device_name = "Cardboard";
+
+    // --- lcd screen ---
+    LiquidCrystal_I2C lcd = LiquidCrystal_I2C(0,0,0);
+    
+    byte lcd_addr = 0x3F;
+    int lcd_cols = 16;
+    int lcd_rows = 2;
+    // --- 
 
     // secret to validate wlan requests
     String secret = "WHALE";
@@ -167,10 +190,8 @@ private:
     // animation frame for lcd connection process
     int anim_frame = 0;
 
-    String device_name = "Cardboard";
-
     /**
-    * Attempts connect to WiFi with ssid and key specified.
+    * Attempts connect via WiFi interface using ssid and key specified with `set_wifi_credentials(wlan_ssid, wlan_key);`.
     */
     void wifi_begin() {
         WiFi.begin(ssid, key);
@@ -227,6 +248,9 @@ private:
         // start wlan server
         server.begin();
     }
+    /**
+    * Shows current connection state message.
+    */
     void show_state_message() {
         if (state == State::Wlan) {
             lcd_print("[IP] " + device_name, ip_to_string(WiFi.localIP()), 1);
