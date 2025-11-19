@@ -1,14 +1,35 @@
 > [!IMPORTANT]
-> Don't `#include` both lib classes at once, since Wlan lib compiles for generic esp8266 controller and Ethernet one for Arduino Uno with ethernet interface installed.
-> It potentially can work together if some controller has both interfaces to communicate with wlan and ethernet, but I didn't test it and probably won't to.
+> It's highly recommended **not** to `#include` both `DelibWlan.h` and `DelibEthernet.h` modules at once, since the first one compiles for Generic ESP8266 Controller and the second one for Arduino Uno with Ethernet interface installed.
 > 
-> This lib most likely written and tested for products by [amperka.ru](https://amperka.ru/) and [iarduino.ru](https://iarduino.ru/).
+> Modules potentially can work together if some controller has both interfaces to communicate with WLAN and Ethernet (like based on ESP32 WT32-ETH01 controller), but I didn't test it and most likely won't to.
+> 
+> This lib written and tested for products by **[amperka.ru](https://amperka.ru/)** and **[iarduino.ru](https://iarduino.ru/)**.
 
-### Summary
+## 🐈Summary
 Core network lib for mirco contollers to initialize and handle their server side.
 
-### Install
-Clone repo into local arduino librares folder. Lib file should be located like:
+## 🐈Pre-requirements
+1. Get **[ESP8266 Community](https://github.com/esp8266/Arduino)** board extenstion if you plan to work with WLAN module. `DelibWlan.h` designed for esp8266 controller;
+2. Copy dependencies from **[add-ons](https://github.com/de-things/delib/tree/nightly/add-ons)** to the local arduino libraries directory.
+3. Delib relies on `LiquidCrystal_I2C.h`, so make sure your logs screen supports it.
+
+## 🐈Install
+Clone repo into the local arduino librares folder. For Windows it should be:
+
 ```
-C:\Users\your_username\Documents\Arduino\libraries\delib\*.*
+~\Documents\Arduino\libraries\
+```
+
+## 🐈WiFi Example
+```
+todo:
+  scheme
+  code
+```
+
+## 🐈Ethernet Example
+```
+todo:
+  scheme
+  code
 ```
