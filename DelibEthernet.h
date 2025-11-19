@@ -39,36 +39,57 @@ public:
     void update() {
         // wlan client handling
         if (state == State::Ethernet) {
+            String buffer = "";
             EthernetClient client = server.available();
+
             if (client) {
-                buffer += client.read();
-            }
-            else {
-                if (buffer != "") {
-                    old_buffer = buffer;
-                    // "clear" buffer after clonning to the `old_buffer`
-                    buffer = "";
+                while (client.connected()) {
+                    if (client.available() > 0) {
+                        // set flag to true to let lib know, 
+                        // that server is processing a request
+                        is_reading_client = true;
+
+                        char c = client.read();
+                        buffer += c;
+
+                        if (c == cmd_char) {
+                            Serial.print("Received: !");
+                            buffer = ""; // clear buffer to fill it with a command content only (was headers stuff before like: content-type, http 1.1, etc. etc.)
+                        }
+                    }
+                    else {
+                        Serial.println(buffer); // show received command in logs
+
+                        client.println("HTTP/1.1 200 OK");
+                        client.println("Content-Type: text/plain");
+                        client.println("Connection: close");
+                        client.println();
+                        client.println("OK");
+
+                        command = buffer; // store command in specified variable
+
+                        is_reading_client = false; // remove reading flag
+
+                        break;
+                    }
                 }
+
+                delay(1);
                 client.stop();
             }
         }
         delay(1);
     }
     /** 
-    * Points to the last received buffered message from a client. 
-    * Returns `false` if client is sending something at the moment,
-    * `true` otherwise.
+    * Returns latest buffered command received from client.
     */
-    bool get_buffer(String* result) {
-        if (server.available()) {
-            return false;
+    String get_command() {
+        if (is_reading_client) {
+            return "";
         }
-        else { // set result as buffer if client is not sending anything
-            result = &old_buffer;
-            // "clear" `old_buffer` after pointing to the `result`
-            old_buffer = "";
+        else {
+            return command;
         }
-        return true;
     }
     /**
     * Sets device name. 
@@ -113,14 +134,20 @@ private:
 
     String device_name = "Cardboard";
 
-    String buffer = "";
-    String old_buffer = "";
+    String command = "";
+
+    // char used to indentify command's name begin
+    char cmd_char = '!';
+
+    bool is_reading_client = false;
 
     /**
     * Attempts connect to Eth.
     */
     void eth_begin(byte mac[6]) {
+        lcd_print("[STATUS]", "CONNECTING...", 1);
         Serial.println("Connecting...");
+
         if (Ethernet.begin(mac) == 0)
         {
             lcd_print("[ERR]", "NO CABLE", 2000);
