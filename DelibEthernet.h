@@ -95,6 +95,7 @@ public:
         else {
             // try to reconnect using ethernet interface
             eth_begin(_mac);
+            show_state_message();
         }
         delay(1);
     }
@@ -188,7 +189,7 @@ private:
 
         if (Ethernet.begin(mac) == 0)
         {
-            lcd_print("[ERR]", "NO CABLE", 2000);
+            lcd_print("[ERR]", "CANNOT CONNECT", 2000);
             Serial.println("Cannot connect. Check if Ethernet cable is plugged in.");
         }
         else {
