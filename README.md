@@ -22,3 +22,6 @@ Clone repo into the local arduino librares folder. For Windows it should be:
 
 ## 🐈Examples
 Check **[delib-wifi-example](https://github.com/de-things/delib-wifi-example)** and **[delib-ethernet-example](https://github.com/de-things/delib-ethernet-example)** to get into how to use this lib.
+
+## 🐈Why no ESP32 support
+I don't have this kind of controllers in my lab... But if I'll get them someday, I'll expand this core! xd
