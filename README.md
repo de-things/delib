@@ -20,16 +20,5 @@ Clone repo into the local arduino librares folder. For Windows it should be:
 ~\Documents\Arduino\libraries\
 ```
 
-## 🐈WiFi Example
-```
-todo:
-  scheme
-  code
-```
-
-## 🐈Ethernet Example
-```
-todo:
-  scheme
-  code
-```
+## 🐈Examples
+Check **[delib-wifi-example](https://github.com/de-things/delib-wifi-example)** and **[delib-ethernet-example](https://github.com/de-things/delib-ethernet-example)** to get into how to use this lib.
