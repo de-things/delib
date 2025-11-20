@@ -1,24 +1,24 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
 #include <LiquidCrystal_I2C.h>
-    
-enum class State { Default, Wlan };
 
 /**
 * Core network lib class to handle server side of de:things devices.
 */
-class Delib {
+class DelibWlan {
 public:
     /**
-    * WLAN server used to handle wlan requests whenever WLAN is in use.
+    * WLAN server instance. Use it to handle events.
     */
     ESP8266WebServer server = ESP8266WebServer(80);
 
     /**
     * Initialization method. Use it to start a proper server after pre-requirements have finished.
-    * `mac` - device mac.
+    * `mac` - Any MAC address for a device.
     */
     void init(byte mac[6]) {
+        lcd = LiquidCrystal_I2C(lcd_addr, lcd_cols, lcd_rows);
+
         lcd.init();
         lcd.backlight();
 
@@ -115,13 +115,29 @@ public:
         key  = wlan_key;
     }
     /**
-    * Sets a device secret used to authorize wlan requests. (WHALE by default)
+    * Sets a device secret used to authorize wlan requests. 
+    * `new_secret` - Any secret phrase to be used by `auth_wlan_request(response);` (WHALE by default).
     */
     void set_secret(String new_secret) {
         secret = new_secret;
     }
+    /**
+    * Sets device name. 
+    * `name` - Any name for a device (Cardboard by default).
+    */
     void set_device_name(String name) {
         device_name = name;
+    }
+    /**
+    * Sets attributes for lcd screen connected to the controller.
+    * `addr` - logical address to send and show data on screen (1602 16x2 lcd screen owns 0x3F address for this);
+    * `cols` - number of columns screen owns;
+    * `rows` - number of rows screen owns.
+    */
+    void set_lcd_attributes(byte addr, int cols, int rows) {
+        lcd_addr = addr;
+        lcd_cols = cols;
+        lcd_rows = rows;
     }
     /**
     * Prints something on lcd screen. 
@@ -130,7 +146,7 @@ public:
     * `delay_time` - time to wait before continue firmware execution.
     */
     void lcd_print(String row_0, String row_1, int delay_time) {
-        lcd_clear();
+        lcd.clear();
 
         lcd.setCursor(0, 0);
         lcd.print(row_0);
@@ -140,27 +156,31 @@ public:
         delay(delay_time);
     }
     /**
-    * Clears lcd screen. 
-    */
-    void lcd_clear() {
-        lcd.setCursor(0, 0);
-        lcd.print("                ");
-        lcd.setCursor(0, 1);
-        lcd.print("                ");
-    }
-    /**
     * Converts ip[] to String.
     */
     String ip_to_string(IPAddress ip) {
         return String(ip[0]) + "." + String(ip[1]) + "." + String(ip[2]) + "." + String(ip[3]);
     }
 private:
-    LiquidCrystal_I2C lcd = LiquidCrystal_I2C(0x3F, 16, 2);
+
+    // 州
+    enum class State { Default, Wlan };
+
+    // state handler
+    State state = State::Default;
+
+    String device_name = "Cardboard";
+
+    // --- lcd screen ---
+    LiquidCrystal_I2C lcd = LiquidCrystal_I2C(0,0,0);
+    
+    byte lcd_addr = 0x3F;
+    int  lcd_cols = 16;
+    int  lcd_rows = 2;
+    // --- 
 
     // secret to validate wlan requests
     String secret = "WHALE";
-
-    State state = State::Default;
 
     // ssid, key
     String ssid = "";
@@ -169,10 +189,8 @@ private:
     // animation frame for lcd connection process
     int anim_frame = 0;
 
-    String device_name = "Cardboard";
-
     /**
-    * Attempts to connect to WiFi with ssid and key specified.
+    * Attempts connect via WiFi interface using ssid and key specified with `set_wifi_credentials(wlan_ssid, wlan_key);`.
     */
     void wifi_begin() {
         WiFi.begin(ssid, key);
@@ -229,6 +247,9 @@ private:
         // start wlan server
         server.begin();
     }
+    /**
+    * Shows current connection state message.
+    */
     void show_state_message() {
         if (state == State::Wlan) {
             lcd_print("[IP] " + device_name, ip_to_string(WiFi.localIP()), 1);
