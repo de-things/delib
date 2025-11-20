@@ -10,7 +10,7 @@ Core network lib for mirco contollers to initialize and handle their server side
 
 ## 🐈Pre-requirements
 1. Get **[ESP8266 Community](https://github.com/esp8266/Arduino)** board extenstion if you plan to work with WLAN module. `DelibWlan.h` designed for esp8266 controller;
-2. Copy dependencies from **[add-ons](https://github.com/de-things/delib/tree/nightly/add-ons)** to the local arduino libraries directory.
+2. Copy dependencies from **[add-ons](https://github.com/de-things/delib/tree/main/add-ons)** to the local arduino libraries directory.
 3. Delib relies on `LiquidCrystal_I2C.h`, so make sure your logs screen supports it.
 
 ## 🐈Install
