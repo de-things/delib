@@ -1,5 +1,5 @@
 > [!IMPORTANT]
-> It's highly recommended **not** to `#include` both `DelibWlan.h` and `DelibEthernet.h` modules at once, since the first one compiles for Generic ESP8266 Controller and the second one for Arduino Uno with Ethernet interface installed.
+> It's highly recommended **not** to `#include` both `DelibWlan.h` and `DelibEthernet.h` modules at once, since the first one compiles for Generic ESP8266 Controller and the second one for Arduino Board with Ethernet interface installed.
 > 
 > Modules potentially can work together if some controller has both interfaces to communicate with WLAN and Ethernet (like based on ESP32 WT32-ETH01 controller), but I didn't test it and most likely won't to.
 > 
