@@ -68,7 +68,7 @@ public:
                         client.println("Content-Type: text/plain");
                         client.println("Connection: close");
                         client.println();
-                        client.println("OK");
+                        client.println(response);
 
                         command = buffer; // store command in specified variable
 
@@ -109,6 +109,12 @@ public:
         else {
             return command;
         }
+    }
+    /**
+     * Sets a response message to send back to a client upon `http` request.
+     */
+    void set_response(String message) {
+        response = message;
     }
     /**
     * Sets device name. 
@@ -172,6 +178,9 @@ private:
     EthernetServer server = EthernetServer(80);
 
     String command = "";
+
+    // response message to send to a client
+    String response = "";
 
     // char used to indentify command's name begin
     char cmd_char = '!';
