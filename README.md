@@ -16,4 +16,4 @@ C:\Users\your_username\Documents\Arduino\libraries
 Check **[delib-wifi-example](https://github.com/de-things/delib-wifi-example)** and **[delib-ethernet-example](https://github.com/de-things/delib-ethernet-example)** to get into how to use this lib.
 
 ## ESP32 Support?
-I hate ESP32, so there is no ESP32 support.
+I hate ESP32 server (no routing), so there is no ESP32 support.
