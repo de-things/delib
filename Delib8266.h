@@ -3,9 +3,9 @@
 #include <LiquidCrystal_I2C.h>
 
 /**
-* Core network lib class to handle server side of de:things devices.
+* Core network lib class to handle server side of de:things devices based on ESP8266 family.
 */
-class DelibWlan {
+class Delib8266 {
 public:
     /**
     * WLAN server instance. Use it to handle events.
