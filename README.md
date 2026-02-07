@@ -26,22 +26,27 @@ byte mac[6] = { 0x00, 0x00, 0x00, 0x00, 0xff, 0x04 };
 Delib32 delib = Delib32();
 
 void setup() {
-  delib.set_wifi_credentials("your_ssid", "your_password");
+    // define wifi credentials to connect to
+    delib.set_wifi_credentials("your_ssid", "your_password");
 
-  // i will reconfigure it later for 128x64 i2c lcd screen, since it's more compact.
-  delib.set_lcd_attributes(0x3F /* alternative: 0x27 */, 16, 2); // lcd screen parameters (based on 1602 lcd 16x2 screen)
+    // lcd screen parameters (based on 1602 lcd 16x2 screen)
+    // NOTE: [i will reconfigure it later for 128x64 i2c lcd screen, since it's more compact.]
+    delib.set_lcd_attributes(0x3F /* alternative: 0x27 */, 16, 2);
 
-  // init device
-  delib.init(mac);
+    // init controller ddv (delib device) core
+    delib.init(mac);
 }
 
 void loop() {
-  if (delib.get_command() == "!ping") { 
-    delib.send_response("pong");
-  }
+    // send a "pong" message to client 
+    // on incoming "!ping" message
+    // received as a POST request body [text/plain].
+    if (delib.get_command() == "!ping") {
+        delib.send_response("pong");
+    }
 
-  // invoke delib update
-  delib.update();
+    // invoke ddv update
+    delib.update();
 }
 ```
 
