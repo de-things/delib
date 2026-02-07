@@ -19,7 +19,7 @@ C:\Users\your_username\Documents\Arduino\libraries
 ```cpp
 #include <Delib32.h>
 
-// ddv mac
+// ddv (delib device) mac
 byte mac[6] = { 0x00, 0x00, 0x00, 0x00, 0xff, 0x04 };
 
 // delib instance
@@ -33,7 +33,7 @@ void setup() {
     // NOTE: [i will reconfigure it later for 128x64 i2c lcd screen, since it's more compact.]
     delib.set_lcd_attributes(0x3F /* alternative: 0x27 */, 16, 2);
 
-    // init controller ddv (delib device) core
+    // init controller ddv core
     delib.init(mac);
 }
 
