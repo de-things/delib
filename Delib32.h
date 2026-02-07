@@ -80,7 +80,7 @@ public:
                     }
                     
                     command = "!" + buffer; // save command into a specified variable
-                    Serial.print("Received: !" + String(buffer)); // print buffered command in serial
+                    Serial.println("Received: !" + String(buffer)); // print buffered command in serial
                 }
             }
 
