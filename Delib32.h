@@ -154,6 +154,9 @@ public:
 
             // disconnect client
             client.stop();
+
+            // clear the command buffer
+            command = "";
         }
     }
     /**
@@ -172,12 +175,6 @@ public:
         else {
             return command;
         }
-    }
-    /**
-     * Sets a response message to send back to a client upon `http` request.
-     */
-    void set_response(String message) {
-        response = message;
     }
 private:
     // 州
@@ -201,9 +198,6 @@ private:
 
     // latest command received from client
     String command = "";
-
-    // response message to send to a client
-    String response = "";
 
     // char used to indentify command's name begin
     char cmd_char = '!';
