@@ -1,9 +1,10 @@
 #include <WiFi.h>
+#include <LiquidCrystal_I2C.h>
 
 /**
 * Core network lib class to handle server side of de:things devices based on ESP32 family.
 */
-class Delib32 {
+class Delib32lcd {
 public:
     /**
     * WLAN server instance. Use it to handle events.
@@ -15,11 +16,25 @@ public:
     * `mac` - Any MAC address for a device.
     */
     void init(byte mac[6]) {
+        lcd = LiquidCrystal_I2C(lcd_addr, lcd_cols, lcd_rows);
+
+        lcd.init();
+        lcd.backlight();
+
+        lcd_print("[INIT]", device_name, 2000);
+
+        lcd_print("[SERIAL]", "", 10);
         
         Serial.begin(115200);
-        while (!Serial) { }
-        
-        Serial.println("\nSerial initialized\nSelected WLAN profile."); 
+        while (!Serial) { lcd.print("."); }
+
+        Serial.println("");
+
+        lcd_print("[SERIAL]", "OK", 1000);
+        Serial.println("Serial initialized");
+
+        lcd_print("[SELECTED]", "WLAN", 2000);
+        Serial.println("Selected WLAN profile."); 
 
         WiFi.mode(WIFI_STA);
         WiFi.hostname(device_name);
@@ -65,7 +80,7 @@ public:
                     }
                     
                     command = "!" + buffer; // save command into a specified variable
-                    Serial.println("Called: !" + String(buffer)); // print buffered command in serial
+                    Serial.println("Received: !" + String(buffer)); // print buffered command in serial
                 }
             }
 
@@ -97,6 +112,33 @@ public:
     */
     void set_device_name(String name) {
         device_name = name;
+    }
+    /**
+    * Sets attributes for lcd screen connected to the controller.
+    * `addr` - logical address to send and show data on screen (1602 16x2 lcd screen owns 0x3F address for this);
+    * `cols` - number of columns screen owns;
+    * `rows` - number of rows screen owns.
+    */
+    void set_lcd_attributes(byte addr, int cols, int rows) {
+        lcd_addr = addr;
+        lcd_cols = cols;
+        lcd_rows = rows;
+    }
+    /**
+    * Prints something on lcd screen. 
+    * `row_0` - message to first row;
+    * `row_1` - message to second row;
+    * `delay_time` - time to wait before continue firmware execution.
+    */
+    void lcd_print(String row_0, String row_1, int delay_time) {
+        lcd.clear();
+
+        lcd.setCursor(0, 0);
+        lcd.print(row_0);
+        lcd.setCursor(0, 1);
+        lcd.print(row_1);
+
+        delay(delay_time);
     }
     /**
     Sends a response message and closes the client's request.
@@ -134,13 +176,6 @@ public:
             return command;
         }
     }
-    /**
-     * Returns current IP address if device is connected to network.
-     */
-    IPAddress get_local_ip() {
-        return WiFi.localIP();
-    }
-
 private:
     // 州
     enum class State { Default, Wlan };
@@ -152,6 +187,14 @@ private:
     State state = State::Default;
 
     String device_name = "Cardboard";
+
+    // --- lcd screen ---
+    LiquidCrystal_I2C lcd = LiquidCrystal_I2C(0,0,0);
+    
+    byte lcd_addr = 0x3F;
+    int  lcd_cols = 16;
+    int  lcd_rows = 2;
+    // --- 
 
     // latest command received from client
     String command = "";
@@ -166,24 +209,31 @@ private:
     String ssid = "";
     String key  = "";
 
+    // animation frame for lcd connection process
+    int anim_frame = 0;
+
     /**
     * Attempts connect via WiFi interface using ssid and key specified with `set_wifi_credentials(wlan_ssid, wlan_key);`.
     */
     void wifi_begin() {
         WiFi.begin(ssid, key);
 
-        Serial.println("Connecting to " + ssid);
+        lcd_print(ssid, "", 10);
+        Serial.print("Connecting to "); Serial.println(ssid);
 
-        while (WiFi.status() != WL_CONNECTED) {
+        while (WiFi.status() != WL_CONNECTED)
+        {
             if (WiFi.status() == WL_NO_SSID_AVAIL) {
+                lcd_print("[ERR] FAILED", "BAD SSID", 5000);
                 Serial.println("\nSSID is not available.");
-        
+
                 // retry again
                 wifi_begin();
                 return;
             }
 
             if (WiFi.status() == WL_CONNECT_FAILED) {
+                lcd_print("[ERR]", "UNKNOWN", 5000);
                 Serial.println("\nSomethinig went wrong. Is credentials valid?");
 
                 // retry again
@@ -191,11 +241,23 @@ private:
                 return;
             }
 
+            // dots animation for connection process
+            if (anim_frame >= 3) {
+                lcd.setCursor(0, 1);
+                lcd.print("   ");
+                lcd.setCursor(0, 1);
+                anim_frame = 0;
+            }
+            else {
+                lcd.print(".");
+                anim_frame += 1;
+            }
+
             Serial.print(".");
             delay(200);
         }
 
-        Serial.println();
+        lcd_print("[WLAN]", "OK", 1000);
 
         state = State::Wlan; // state to determine that wlan server is up
 
@@ -206,10 +268,12 @@ private:
     * Shows current connection state message.
     */
     void show_state_message() {
-        if (state == State::Wlan) { // show ip on success
-            Serial.println("Device IP address: " + ip_to_string(WiFi.localIP()));
+        if (state == State::Wlan) {
+            lcd_print("[IP] " + device_name, ip_to_string(WiFi.localIP()), 1);
+            Serial.print("\nConnected, IP address: "); Serial.println(WiFi.localIP());
         }
         else if (state == State::Default) { // print this message otherwise
+            lcd_print("[ERR]", "NO CONNECTION", 10);
             Serial.println("Connection cannot be established. Please check service messages above.");
         }
     }
