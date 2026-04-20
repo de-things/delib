@@ -1,54 +1,15 @@
-> [!CAUTION]
-> This is test branch with ESP32 support.
+> [!IMPORTANT]
+> This library aims at ESP32-C5 controller, but it should work with most of ESP32 family as well. (I tested it on ESP32-C3 tho)
 
 ## Summary
-Core network lib for mirco contollers to initialize and handle their server side.
+Library to work with decentralized IoT on ESP32.
 
 ## Install
-1. Clone repo to local arduino libraries directory. For Windows it's:
+1. Clone repo to local arduino libraries directory. For Windows the path is:
 ```
 C:\Users\your_username\Documents\Arduino\libraries
 ```
-2. Copy **[add-ons](https://github.com/de-things/delib/tree/main/add-ons)** to the local arduino libraries directory;
-3. *(Optionally)* Install **[esp8266 by ESP8266 Community](https://github.com/esp8266/Arduino)** board extension if you plan to work with esp8266 controller [module](https://github.com/de-things/delib/blob/main/Delib8266.h).
-4. *(Optionally)* Install **[esp32 by Espressif](https://github.com/espressif/arduino-esp32)** board extension if you plan to work with esp32 controller [module](https://github.com/de-things/delib/blob/main/Delib32.h).
+2. *(Optionally)* Install **[esp32 by Espressif](https://github.com/espressif/arduino-esp32)** board extension if you plan to flash your ESP32 controller with ArduinoIDE.
 
-## Examples
-
-### ESP32
-```cpp
-#include <Delib32.h>
-
-// ddv (delib device) mac
-byte mac[6] = { 0x00, 0x00, 0x00, 0x00, 0xff, 0x04 };
-
-// delib instance
-Delib32 delib = Delib32();
-
-void setup() {
-    // define wifi credentials to connect to
-    delib.set_wifi_credentials("your_ssid", "your_password");
-
-    // lcd screen parameters (based on 1602 lcd 16x2 screen)
-    // NOTE: [i will reconfigure it later for 128x64 i2c lcd screen, since it's more compact.]
-    delib.set_lcd_attributes(0x3F /* alternative: 0x27 */, 16, 2);
-
-    // init controller ddv core
-    delib.init(mac);
-}
-
-void loop() {
-    // send a "pong" message to client 
-    // on incoming "!ping" message
-    // received as a POST request body [text/plain].
-    if (delib.get_command() == "!ping") {
-        delib.send_response("pong");
-    }
-
-    // invoke ddv update
-    delib.update();
-}
-```
-
-### ESP8266 / Ethernet
-Check [main](https://github.com/de-things/delib/tree/main) branch readme.
+## Usage
+Check [examples](./examples)
