@@ -10,6 +10,15 @@ DethingsDevice device(
 
 void setup() {
   device.init(); // call delib init
+  
+  /*
+  Have to write in serial port (115200 baud)
+  something like:
+    ...............
+    Device Name: ESP32C5LOL
+    IP: 10.62.41.200
+    MAC: AA:BB:CC:DD:EE:FF
+  */
 }
 
 void loop() {
