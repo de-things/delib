@@ -3,9 +3,9 @@
 #include <DethingsDevice.h>
 
 DethingsDevice device(
-  "ESP32C5LOL",         // name
-  "your_ssid",          // ssid
-  "your_key"            // key
+  "ESP32C5LOL",         // device hostname (custom string identifier over the network)
+  "your_ssid",          // wifi name
+  "your_key"            // wifi password
 );
 
 void setup() {
@@ -16,7 +16,7 @@ void setup() {
   something like:
     ...............
     Device Name: ESP32C5LOL
-    IP: 10.62.41.200
+    IP: 10.62.41.205
     MAC: AA:BB:CC:DD:EE:FF
   */
 }
