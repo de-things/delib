@@ -4,13 +4,8 @@
 ## Summary
 Library to deploy decentralized IoT for ESP32 boards.
 
-### Where to start
-
-* [Examples](./examples) section to understand basic principles of working with de:things infrastructure;
-* Official [GUI client](https://github.com/de-things/ddv-gui) written in vanilla js.
-
 ## Install
-1. Check if **[esp32 by Espressif](https://github.com/espressif/arduino-esp32)** board extension is installed for Arduino IDE if you flash though it.
+1. Check if [esp32 by Espressif](https://github.com/espressif/arduino-esp32) board extension is installed for Arduino IDE if you flash though it.
 2. Clone this repo to `libraries` directory.
 
 ```
@@ -22,3 +17,8 @@ For Windows:
 
 So clone should be '~/Arduino/libraries/delib'
 ```
+
+## Next steps
+
+* Check [examples](./examples) section to understand basic concepts of working with de:things infrastructure;
+* Check official [GUI client](https://github.com/de-things/ddv-gui) designed to control de:things devices.
