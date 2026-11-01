@@ -21,4 +21,4 @@ So clone should be '~/Arduino/libraries/delib'
 ## Next steps
 
 * Check [examples](./examples) section to understand basic concepts of working with de:things infrastructure;
-* Check official web [GUI client](https://github.com/de-things/ddv-gui) designed to control de:things devices.
+* Check official web [GUI client](https://github.com/de-things/de-gui) designed to control de:things devices.
