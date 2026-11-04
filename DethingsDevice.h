@@ -338,8 +338,6 @@ private:
 
         device_storage.nvsWrite("pkey", new_secret.c_str());
 
-        _secret = new_secret.c_str();
-
         Serial.println("Private key (once): " + new_secret);
     }
 
@@ -357,10 +355,14 @@ private:
                 // re-gen key since nvs data is invalid
                 if (strlen(_secret) != 32) {
                     mkPrivateKey("Private key is invalid, re-generating...");
+                    fetchPrivateKey(); // re-get value from memory
+                    return;
                 }
             }
             else if (pkey_err == ESP_ERR_NVS_NOT_FOUND) {
                 mkPrivateKey("Generating private key...");
+                fetchPrivateKey(); // re-get value from memory
+                return;
             }
         }
     }
