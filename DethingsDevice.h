@@ -62,18 +62,16 @@ public:
         Serial.print("Waiting for any input to begin setup [5s]");
         Serial.println();
 
-        while (millis() - start_time < 5000 && Serial.available() == 0) {
-            Serial.print(".");
+        while (millis() - start_time < 4000 && Serial.available() == 0) {
+            Serial.println(String(5 - (int)round(.001 * (millis() - start_time))) + "...");
             delay(1000);
         }
-
-        Serial.println();
 
         // begin device configuration setup
         if (Serial.available() > 0) {
             if (device_setup.init(_ssid, _password)) {
                 // use has changed credentials, so invoke update
-                fetchCredentials();
+                fetchCredentials(true);
             }
         }
 
@@ -152,6 +150,14 @@ public:
 
             // at this moment client is still listening for a server response,
             // so to close the connection call `sendResponse(message)` method in the firmware code.
+        }
+
+        // check disconnects
+        if (!WiFi.isConnected()) {
+            Serial.println("Connection lost");
+            WiFi.disconnect(true); // close old connection
+            wifiBegin(); // try open a new one
+            showStateMessage();
         }
 
         delay(1);
@@ -269,7 +275,7 @@ private:
         }
         WiFi.begin(_ssid, _password);
 
-        Serial.print("Connecting to "); Serial.println(_ssid);
+        Serial.print("Connecting to "); Serial.print(_ssid); Serial.println("...");
 
         while (WiFi.status() != WL_CONNECTED) {
             if (WiFi.status() == WL_NO_SSID_AVAIL) {
@@ -287,12 +293,11 @@ private:
                 wifiBegin();
                 return;
             }
-
-            Serial.print(".");
-            delay(200);
+            
+            delay(100);
         }
 
-        Serial.println();
+        Serial.println("Connected");
 
         // start wlan server
         server.begin();
@@ -313,14 +318,15 @@ private:
 
     /**
     * Updates credentials by getting info from NVS.
+    * `force` - Force fetch no matter of conditions.
     */
-    void fetchCredentials() {
-        Serial.println("Fetching data...");
+    void fetchCredentials(bool force = false) {
+        Serial.println("Fetching credentials...");
         
-        if (strlen(_ssid) == 0 && !device_storage.nvsRead("ssid", ssid_out)) {
+        if ((strlen(_ssid) == 0 || force) && !device_storage.nvsRead("ssid", ssid_out)) {
             _ssid = ssid_out.data();
         }
-        if (strlen(_password) == 0 && !device_storage.nvsRead("pass", password_out)) {
+        if ((strlen(_password) == 0 || force) && !device_storage.nvsRead("pass", password_out)) {
             _password = password_out.data();
         }
     }
@@ -345,6 +351,8 @@ private:
     * Updates private key data by getting info from NVS.
     */
     void fetchPrivateKey() {
+        Serial.println("Fetching private key...");
+
         if (strlen(_secret) == 0) {
             esp_err_t pkey_err {};
 
