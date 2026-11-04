@@ -6,7 +6,7 @@ Library to deploy decentralized IoT for ESP32 boards.
 
 ## Usage
 
-There is 2 ways to use this library for your IoT device.
+There're 2 ways to use this library for your IoT device.
 
 ### A recommended way
 
@@ -74,7 +74,7 @@ void loop() {
 }
 ```
 
-This implementation does not require you to use `/config`, but there is a trick: if you won't specify some data, let's say, a WiFi password, it's value will be retrieved from NVS during boot, so you can update it dynamically using a config mode. Other values will be protected from being retrived by NVS no matter what you set in there.
+This implementation does not require you to use `/config`, but there's a trick: if you won't specify some data, let's say, a WiFi password, it's value will be retrieved from NVS during boot, so you can update it dynamically using a config mode. Other values will be protected from being retrived by NVS no matter what you set in there.
 
 Also, implementation exist as a sort of backward compatibility for old firmware working on delib, so you don't need to update your code, delib will handle problems and fill empty fields required.
 
