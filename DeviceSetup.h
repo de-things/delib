@@ -25,9 +25,9 @@ public:
         Serial.println("⚠️ Tip: Send '*' to keep unchanged");
         Serial.println();
         
-        readItem("🛜 WiFi Hostname", hostname, _hostname);
-        readItem("🛜 WiFi SSID", ssid, _ssid);
-        readItem("🛜 WiFi Password", password, _password);
+        readItem("🛜 WiFi Hostname*", hostname, _hostname);
+        readItem("🛜 WiFi SSID*", ssid, _ssid);
+        readItem("🛜 WiFi Password*", password, _password);
         readPrivateKeyAnswer("🙈 Re-gen private key? [y / *]");
 
         if (_hostname != "*") {

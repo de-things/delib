@@ -75,7 +75,7 @@ public:
         // this happens only if private key was defined in class constructor.
         if (strlen(_pkey) > 0 && !device_crypto.isPrivateKeyValid(String(_pkey))) {
             Serial.println("🔴 Hardcoded private key is invalid");
-            Serial.println("⚪ If you unsure, remove it from the constructor and let device generate a private key automatically on startup")
+            Serial.println("⚪ If you unsure, remove it from the constructor and let device generate a private key automatically on startup");
             eternalSleep();
         }
 
