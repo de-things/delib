@@ -105,8 +105,8 @@ public:
             }
             // try to clear nvs
             if (str == "/erase_all") {
-                Serial.print("🟠 Erasing all data [5s]...");
-                Serial.print("⚠️ Tip: Press reboot to cancel");
+                Serial.println("🟠 Erasing all data [5s]...");
+                Serial.println("⚠️ Tip: Reboot to cancel");
                 Serial.println();
                 delay(5000);
 
