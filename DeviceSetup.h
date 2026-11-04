@@ -72,9 +72,12 @@ public:
             String str = "";
             while (Serial.available() > 0) {
                 char c = Serial.read();
-                if (c == '\n' || c == '\r') continue;
+                if (c == '\n' || c == '\r' || c == ' ') continue;
                 str += c;
             }
+
+            str.toLowerCase();
+
             // try to enable config mode trigger
             if (str == "/config") {
                 Serial.print("🟡 Rebooting in configuration mode...");
