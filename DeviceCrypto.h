@@ -7,7 +7,9 @@
 class DeviceCrypto {
 public:
     /**
-     * Generates random string of 32 chars.
+     * Generates random string of 32 chars with a size of 32 bytes.
+     * [For secure random values implement entropy before use]
+     * https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/system/random.html
      */
     void randHex32(String& out) {
         uint8_t bytes[16] {};
