@@ -14,15 +14,15 @@ public:
             if (!esp_result) { // try to free storage and re-init
                 esp_result = nvs_flash_init();
                 if (!esp_result) {
-                    Serial.println("NVS initialized...");
+                    Serial.println("🟢 NVS initialized");
                 }
                 else {
-                    Serial.println("NVS initialization error...");
+                    Serial.println("🔴 NVS initialization failed");
                 }
             }
         }
         else {
-            Serial.println("NVS initialized...");
+            Serial.println("🟢 NVS initialized");
         }
     }
     /**
@@ -41,10 +41,6 @@ public:
         if (esp_result) return esp_result;
 
         nvs_close(nvs_handle);
-
-        if (esp_result != ESP_OK) {
-            Serial.print("NVS WRITE ERR: "); Serial.println(esp_result);
-        }
 
         return esp_result;
     }
@@ -84,6 +80,26 @@ public:
         if (esp_result) return esp_result;
 
         esp_result = nvs_erase_key(nvs_handle, key);
+        if (esp_result) return esp_result;
+
+        esp_result = nvs_commit(nvs_handle);
+        if (esp_result) return esp_result;
+
+        nvs_close(nvs_handle);
+
+        return esp_result;
+    }
+
+    /**
+     * Removes all data from NVS. Returns `ESP_OK` on success. 
+     */
+    esp_err_t nvsClear() {
+        nvs_handle_t nvs_handle;
+
+        esp_result = nvs_open("storage", NVS_READWRITE, &nvs_handle);
+        if (esp_result) return esp_result;
+
+        esp_result = nvs_erase_all(nvs_handle);
         if (esp_result) return esp_result;
 
         esp_result = nvs_commit(nvs_handle);

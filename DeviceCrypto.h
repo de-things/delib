@@ -1,4 +1,5 @@
 #include <esp_random.h>
+#include <string.h>
 
 #ifndef DeviceCrypto_H
 #define DeviceCrypto_H
@@ -23,11 +24,30 @@ public:
     }
 
     /**
-    * Encrypts `data` string using stored secret bytes by AES-256-GCM.
+     * Returns true if private key specified is valid for use in encryption.
+     */
+    bool isPrivateKeyValid(String pkey) {
+        // non-equal to 32 bytes
+        if (strlen(pkey.c_str()) != 32) return false;
+
+        pkey.toLowerCase();
+        
+        const char cset[] = "0123456789abcdef";
+        for (int i = 0; i < pkey.length(); ++i) {
+            if (strchr(cset, pkey[i]) == nullptr)
+                return false;
+        }
+        return true;
+    }
+
+    /**
+    * Encrypts data string with a private key by AES-256-GCM.
+    * `data` - Data string to encrypt;
+    * `pkey` - Private key string.
     * Returns encrypted data `vector<uint8_t>` on success, empty `vector<uint8_t>` otherwise.
     */
-    std::vector<uint8_t> encrypt(const char* data, const char* secret) {
-        const unsigned char* _secret = reinterpret_cast<const unsigned char*>(secret);
+    std::vector<uint8_t> encrypt(const char* data, const char* pkey) {
+        const unsigned char* _pkey = reinterpret_cast<const unsigned char*>(pkey);
         const size_t data_len = strlen(data);
 
         std::vector<uint8_t> enc(iv_len + data_len + tag_len);
@@ -46,7 +66,7 @@ public:
         mbedtls_gcm_context ctx {};
         mbedtls_gcm_init(&ctx);
 
-        int rc = mbedtls_gcm_setkey(&ctx, MBEDTLS_CIPHER_ID_AES, _secret, 256);
+        int rc = mbedtls_gcm_setkey(&ctx, MBEDTLS_CIPHER_ID_AES, _pkey, 256);
 
         if (rc == 0) {
             rc = mbedtls_gcm_crypt_and_tag(
@@ -71,13 +91,14 @@ public:
     }
 
     /**
-    * Decrypts `enc` vector using stored secret bytes by AES-256-GCM.
+    * Decrypts `enc` vector with a private key (pkey) by AES-256-GCM.
     * Returns decrypted data string on success, empty `vector` otherwise.
     * `enc` - an encrypted data to decrypt;
+    * `pkey` - Private key string;
     * `output` - an output `vector<uint8_t>` reference to store decrypted data.
     */
-    bool decrypt(const std::vector<uint8_t>& enc, const char* secret, std::vector<uint8_t>& output) {
-        const unsigned char* _secret = reinterpret_cast<const unsigned char*>(secret);
+    bool decrypt(const std::vector<uint8_t>& enc, const char* pkey, std::vector<uint8_t>& output) {
+        const unsigned char* _pkey = reinterpret_cast<const unsigned char*>(pkey);
 
         if (enc.size() < iv_len + tag_len) {
             return false;
@@ -93,7 +114,7 @@ public:
         mbedtls_gcm_context ctx {};
         mbedtls_gcm_init(&ctx);
 
-        int rc = mbedtls_gcm_setkey(&ctx, MBEDTLS_CIPHER_ID_AES, _secret, 256);
+        int rc = mbedtls_gcm_setkey(&ctx, MBEDTLS_CIPHER_ID_AES, _pkey, 256);
 
         if (rc == 0) {
             rc = mbedtls_gcm_auth_decrypt(

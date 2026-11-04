@@ -6,42 +6,96 @@
 class DeviceSetup {
 public:
     /**
-    * Initializes (enters) setup GUI.
+    * Begins (enters) setup GUI.
     */
-    bool init(const char* ssid, const char* password) {
+    esp_err_t begin(const char* hostname, const char* ssid, const char* password) {
+        String _hostname = "";
         String _ssid = "";
         String _password = "";
-        
-        bool result = false;
 
+        esp_err_t err {};
+        
         // clear serial input buffer
         while(Serial.available() > 0) {
             Serial.read();
         }
+
+        Serial.println();
+        Serial.println("🔧 CONFIG MENU");
+        Serial.println("⚠️ Tip: Send '*' to keep unchanged");
+        Serial.println();
         
-        Serial.println("# Configuration setup");
-        Serial.println("Tip: Send '*' to keep unchanged");
+        readItem("🛜 WiFi Hostname", hostname, _hostname);
+        readItem("🛜 WiFi SSID", ssid, _ssid);
+        readItem("🛜 WiFi Password", password, _password);
+        readPrivateKeyAnswer("🙈 Re-gen private key? [y / *]");
 
-        readItem("> WiFi SSID", ssid, _ssid);
-        readItem("> WiFi password", password, _password);
-
-        readPrivateKeyAnswer("> Recreate private key? [y / *]");
-
+        if (_hostname != "*") {
+            err = device_storage.nvsWrite("name", _hostname.c_str());
+            if (err) return err;
+        }
         if (_ssid != "*") {
-            if (!device_storage.nvsWrite("ssid", _ssid.c_str())) {
-                result = true;
-            }
+            err = device_storage.nvsWrite("ssid", _ssid.c_str());
+            if (err) return err;
         }
         if (_password != "*") {
-            if (!device_storage.nvsWrite("pass", _password.c_str())) {
-                result = true;
-            }
+            err = device_storage.nvsWrite("pass", _password.c_str());
+            if (err) return err;
         }
         
-        Serial.println("# Configuration updated");
+        Serial.println("🟡 Saving changes...");
         Serial.println();
 
-        return result;
+        // `true` if config written and config mode state is set to 0, 
+        // `false` otherwise
+        return device_storage.nvsWrite("config", "0");
+    }
+
+    /**
+     * Returns `true` if device is in config mode according to NVS data.
+     */
+    bool isConfigMode() {
+        std::vector<char> out {};
+        if (!device_storage.nvsRead("config", out)) {
+            return String(out.data()) == "1" ? true : false;
+        }
+        return false;
+    }
+
+    /**
+     * Checks if any serial available, then reads it
+     * and if it equals to `/config` sets config state to 1
+     * + reboots the device.
+     */
+    void listen() {
+        if (Serial.available() > 0) {
+            String str = "";
+            while (Serial.available() > 0) {
+                char c = Serial.read();
+                if (c == '\n' || c == '\r') continue;
+                str += c;
+            }
+            // try to enable config mode trigger
+            if (str == "/config") {
+                Serial.print("🟡 Rebooting in configuration mode...");
+                Serial.println();
+                esp_err_t err = device_storage.nvsWrite("config", "1");
+
+                if (!err) ESP.restart();
+                else Serial.print("🔴 Cannot enter configuration mode, ERR CODE: "); Serial.println(err);
+            }
+            // try to clear nvs
+            if (str == "/erase_all") {
+                Serial.print("🟠 Erasing all data [3s]...");
+                Serial.println();
+                delay(3000);
+
+                esp_err_t err = device_storage.nvsClear();
+
+                if (!err) ESP.restart();
+                else Serial.print("🔴 Cannot erase all data, ERR CODE: "); Serial.println(err);
+            }
+        }
     }
 
 private:
