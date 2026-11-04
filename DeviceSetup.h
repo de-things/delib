@@ -23,23 +23,39 @@ public:
         Serial.println();
         Serial.println("🔧 CONFIG MENU");
         Serial.println("⚠️ Tip: Send '*' to keep unchanged");
+        Serial.println("⚠️ Tip: Send '/rm' to remove value");
         Serial.println();
         
-        readItem("🛜 WiFi Hostname*", hostname, _hostname);
-        readItem("🛜 WiFi SSID*", ssid, _ssid);
-        readItem("🛜 WiFi Password*", password, _password);
+        readItem("🛜 WiFi Hostname", hostname, _hostname);
+        readItem("🛜 WiFi SSID", ssid, _ssid);
+        readItem("🛜 WiFi Password", strlen(password) == 0 ? "" : "****", _password);
         readPrivateKeyAnswer("🙈 Re-gen private key? [y / *]");
 
-        if (_hostname != "*") {
+
+        if (_hostname == "/rm") {
+            err = device_storage.nvsRemove("name");
+            if (err) return err;
+        }
+        else if (_hostname != "*") {
             err = device_storage.nvsWrite("name", _hostname.c_str());
             if (err) return err;
         }
-        if (_ssid != "*") {
+
+        if (_ssid == "/rm") {
+            err = device_storage.nvsRemove("ssid");
+            if (err) return err;
+        }
+        else if (_ssid != "*") {
             err = device_storage.nvsWrite("ssid", _ssid.c_str());
             if (err) return err;
         }
-        if (_password != "*") {
-            err = device_storage.nvsWrite("pass", _password.c_str());
+
+        if (_password == "/rm") {
+            err = device_storage.nvsRemove("pwd");
+            if (err) return err;
+        }
+        else if (_password != "*") {
+            err = device_storage.nvsWrite("pwd", _password.c_str());
             if (err) return err;
         }
         
@@ -89,9 +105,10 @@ public:
             }
             // try to clear nvs
             if (str == "/erase_all") {
-                Serial.print("🟠 Erasing all data [3s]...");
+                Serial.print("🟠 Erasing all data [5s]...");
+                Serial.print("⚠️ Tip: Press reboot to cancel");
                 Serial.println();
-                delay(3000);
+                delay(5000);
 
                 esp_err_t err = device_storage.nvsClear();
 

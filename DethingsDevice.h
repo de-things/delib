@@ -67,10 +67,9 @@ public:
             }
         }
 
+        // define custom hostname if any
         if (strlen(_hostname) != 0)
             WiFi.setHostname(_hostname);
-        
-        // WiFi.setAutoReconnect(true);
 
         // this happens only if private key was defined in class constructor.
         if (strlen(_pkey) > 0 && !device_crypto.isPrivateKeyValid(String(_pkey))) {
@@ -338,18 +337,38 @@ private:
 
     /**
     * Updates credentials by getting info from NVS.
-    * `force` - Force fetch no matter of conditions.
+    * `silent` - Removes fetching message upon start.
     */
-    void fetchWiFiData(const char*& hostname, const char*& ssid, const char*& password, bool force = false) {
-        Serial.println("🟡 Fetching WiFi data...");
-        
-        if ((strlen(hostname) == 0 || force) && !device_storage.nvsRead("name", hostname_out)) {
-            hostname = hostname_out.data();
+    void fetchWiFiData(const char*& hostname, const char*& ssid, const char*& password, bool silent = false) {
+        if (!silent) {
+            Serial.println("🟡 Fetching WiFi data...");
         }
-        if ((strlen(ssid) == 0 || force) && !device_storage.nvsRead("ssid", ssid_out)) {
+        
+        if (strlen(hostname) == 0) {
+            esp_err_t hostname_err = device_storage.nvsRead("name", hostname_out);
+
+            if (!hostname_err) {
+                hostname = hostname_out.data();
+            }
+            else if (hostname_err == ESP_ERR_NVS_NOT_FOUND) {
+                Serial.println("🟡 Generating a hostname...");
+
+                String hex = "";
+                device_crypto.randHex4(hex);
+
+                // set random device hostname if unset
+                if (!device_storage.nvsWrite("name", String("device_" + hex).c_str())) {
+                    fetchWiFiData(hostname, ssid, password, true);
+                    return;
+                }
+            }
+        }
+
+        if (strlen(ssid) == 0 && !device_storage.nvsRead("ssid", ssid_out)) {
             ssid = ssid_out.data();
         }
-        if ((strlen(password) == 0 || force) && !device_storage.nvsRead("pass", password_out)) {
+
+        if (strlen(password) == 0 && !device_storage.nvsRead("pwd", password_out)) {
             password = password_out.data();
         }
     }
@@ -367,33 +386,33 @@ private:
 
         device_storage.nvsWrite("pkey", pkey.c_str());
 
-        Serial.println("㊙️ Private key (once): " + pkey);
+        Serial.println("❗ Private key (once): " + pkey);
     }
 
     /**
     * Updates private key data by getting info from NVS.
     * `pkey` - private key reference.
     */
-    void fetchPrivateKey(const char*& pkey) {
-        Serial.println("🟡 Fetching private key...");
+    void fetchPrivateKey(const char*& pkey, bool silent = false) {
+        if (!silent) {
+            Serial.println("🟡 Fetching private key...");
+        }
 
         if (strlen(pkey) == 0) {
-            esp_err_t pkey_err {};
-
-            pkey_err = device_storage.nvsRead("pkey", pkey_out);
+            esp_err_t pkey_err = device_storage.nvsRead("pkey", pkey_out);
         
             if (!pkey_err) {
                 pkey = pkey_out.data();
                 // re-gen key since nvs data is invalid
                 if (!device_crypto.isPrivateKeyValid(String(pkey))) {
                     mkPrivateKey("🟠 Private key is invalid, re-generating...");
-                    fetchPrivateKey(pkey); // re-get value from memory
+                    fetchPrivateKey(pkey, true); // re-get value from memory
                     return;
                 }
             }
             else if (pkey_err == ESP_ERR_NVS_NOT_FOUND) {
-                mkPrivateKey("🟡 Generating private key...");
-                fetchPrivateKey(pkey); // re-get value from memory
+                mkPrivateKey("🟡 Generating a private key...");
+                fetchPrivateKey(pkey, true); // re-get value from memory
                 return;
             }
         }

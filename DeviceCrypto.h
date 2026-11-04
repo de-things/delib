@@ -24,6 +24,20 @@ public:
             out += cset[b % 16];
         }
     }
+    
+    void randHex4(String& out) {
+        uint8_t bytes[2] {};
+        out = "";
+
+        esp_fill_random(bytes, sizeof(bytes));
+
+        const char* cset = "0123456789abcdef";
+
+        for (uint8_t b : bytes) {
+            out += cset[b / 16];
+            out += cset[b % 16];
+        }
+    }
 
     /**
      * Returns true if private key specified is valid for use in encryption.
