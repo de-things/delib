@@ -38,7 +38,7 @@ void loop() {
 
 ### How to connect to WiFi and stuff?
 
-When device is connected to a serial port send there: `/config`. It will reboot a device in config mode asking you to clarify various of stuff, including WiFi credentials. All of this data stores at [NVS](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/storage/nvs_flash.html), so restarting your device retreives all of clarified data from it. Follow serial output instructions to get into more.
+When device is connected to a serial port send there: `/config`. It will reboot a device in config mode asking you to clarify various of stuff, including WiFi credentials. All of this data stores at [NVS](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/storage/nvs_flash.html), so restarting your device retrieves all of clarified data from it. Follow serial output instructions to get into more.
 
 ### A "hardcoded" way
 
@@ -74,7 +74,7 @@ void loop() {
 }
 ```
 
-This implementation does not require you to use `/config`, but there's a trick: if you won't specify some data, let's say, a WiFi password, it's value will be retrieved from NVS during boot, so you can update it dynamically using a config mode. Other values will be protected from being retrived by NVS no matter what you set in there.
+This implementation does not require you to use `/config`, but there's a trick: if you won't specify some data, let's say, a WiFi password, it's value will be retrieved from NVS during boot, so you can update it dynamically using a config mode. Other values will be protected from being retrieved by NVS no matter what you set in there.
 
 Also, implementation exist as a sort of backward compatibility for old firmware working on delib, so you don't need to update your code, delib will handle problems and fill empty fields required.
 
