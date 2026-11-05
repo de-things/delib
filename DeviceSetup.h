@@ -28,13 +28,9 @@ public:
         Serial.println();
         
         readItem("🛜 WiFi Hostname", hostname, _hostname);
-        listen(); // checks if any service input provided
         readItem("🛜 WiFi SSID", ssid, _ssid);
-        listen();
         readItem("🛜 WiFi Password", strlen(password) == 0 ? "" : "****", _password);
-        listen();
         readPrivateKeyAnswer("🙈 Re-gen private key? [y / *]");
-        listen();
 
         if (_hostname == "/rm") {
             err = device_storage.nvsRemove("name");
