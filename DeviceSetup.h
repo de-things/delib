@@ -24,19 +24,23 @@ public:
         Serial.println("🔧 CONFIG MENU");
         Serial.println("⚠️ Tip: Send '*' to keep unchanged");
         Serial.println("⚠️ Tip: Send '/rm' to remove value");
+        Serial.println("⚠️ Tip: Send '/exit' reboot skipping changes");
         Serial.println();
         
         readItem("🛜 WiFi Hostname", hostname, _hostname);
+        listen(); // checks if any service input provided
         readItem("🛜 WiFi SSID", ssid, _ssid);
+        listen();
         readItem("🛜 WiFi Password", strlen(password) == 0 ? "" : "****", _password);
+        listen();
         readPrivateKeyAnswer("🙈 Re-gen private key? [y / *]");
-
+        listen();
 
         if (_hostname == "/rm") {
             err = device_storage.nvsRemove("name");
             if (err) return err;
         }
-        else if (_hostname != "*") {
+        else if (!keepCurrent(_hostname)) {
             err = device_storage.nvsWrite("name", _hostname.c_str());
             if (err) return err;
         }
@@ -45,7 +49,7 @@ public:
             err = device_storage.nvsRemove("ssid");
             if (err) return err;
         }
-        else if (_ssid != "*") {
+        else if (!keepCurrent(_ssid)) {
             err = device_storage.nvsWrite("ssid", _ssid.c_str());
             if (err) return err;
         }
@@ -54,7 +58,7 @@ public:
             err = device_storage.nvsRemove("pwd");
             if (err) return err;
         }
-        else if (_password != "*") {
+        else if (!keepCurrent(_password)) {
             err = device_storage.nvsWrite("pwd", _password.c_str());
             if (err) return err;
         }
@@ -123,6 +127,24 @@ private:
     DeviceStorage device_storage {};
 
     /**
+    * True whenever menu item should be unchanged.
+    */
+    bool keepCurrent(String item) {
+        return item == "*" || item == "";
+    }
+
+    /**
+    * Exits config mode skipping changes.
+    */
+    void forceExit() {
+        Serial.println("🟡 Rebooting without saving changes...");
+        Serial.println();
+        esp_err_t err = device_storage.nvsWrite("config", "0");
+        if (!err) ESP.restart();
+        else Serial.print("🔴 Cannot exit configuration mode, ERR CODE: "); Serial.println(err);
+    }
+
+    /**
      * Removes private key data from the nvs if answer was positive.
      */
     void readPrivateKeyAnswer(String q) {
@@ -133,6 +155,10 @@ private:
             char c = Serial.read();
             if (c == '\n' || c == '\r') continue;
             ans += c;
+        }
+
+        if (ans == "/exit") {
+            forceExit();
         }
 
         if (ans == "y" || ans == "Y") {
@@ -152,6 +178,10 @@ private:
             char c = Serial.read();
             if (c == '\n' || c == '\r') continue;
             ref += c;
+        }
+
+        if (ref == "/exit") {
+            forceExit();
         }
 
         Serial.println();
