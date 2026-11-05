@@ -1,8 +1,13 @@
 #include <WiFi.h>
-#include <Arduino.h>
+#include <string.h>
 #include <vector>
 #include <mbedtls/gcm.h>
 #include <mbedtls/base64.h>
+#include <nvs.h>
+#include <nvs_flash.h>
+#include "DeviceSetup.h"
+#include "DeviceStorage.h"
+#include "DeviceCrypto.h"
 
 /**
 * Core network lib class to handle server side of de:things devices based on ESP32 family.
@@ -11,32 +16,78 @@ class DethingsDevice {
 public:
     /**
      * Dethings device instance.
-     * `device_name` - device preferable hostname;
-     * `ssid` - WiFi name to connect to;
-     * `password` - WiFi password to connect with;
-     * `secret` - 32-byte private key (secret) used in AES-256-GCM encryption.
+     * `hostname` - device preferable hostname;
+     * `ssid` - WiFi name to connect to (nvs value by default);
+     * `password` - WiFi password to connect with (nvs value by default);
+     * `pkey` - 32-byte private key (secret) used in AES-256-GCM encryption (nvs value by default).
      */
-    DethingsDevice(const char* device_name, String ssid, String password, const char* secret) {
-        WiFi.setHostname(device_name);
-        WiFi.setAutoReconnect(true);
+    DethingsDevice(const char* hostname = "", const char* ssid = "", const char* password = "", const char* pkey = "") {
+        Serial.begin(115200);
+        while (!Serial);
 
-        _ssid       = ssid;
-        _password   = password;
-        _secret     = secret;
+        Serial.println();
+        Serial.println("🟢 Serial initialized");
+
+        if (strlen(hostname) != 0) {
+            _hostname = hostname;
+        }
+        if (strlen(ssid) != 0) {
+            _ssid = ssid;
+        }
+        if (strlen(password) != 0) {
+            _password = password;
+        }
+        if (strlen(pkey) != 0) {
+            _pkey = pkey;
+        }
     }
 
     /**
     * Initialization method. Use it to start a proper server after pre-requirements have finished.
-    * `mac` - Any MAC address for a device.
     */
     void init() {
-        Serial.begin(115200);
-        while (!Serial) { }
-        
-        Serial.println("\nSerial initialized...");
+        esp_log_level_set("wifi", ESP_LOG_NONE);
+
+        device_storage.init();
+
+        // fetch nvs data
+        fetchWiFiData(_hostname, _ssid, _password);
+
+        // enter config mode if enabled
+        if (device_setup.isConfigMode()) {
+            esp_err_t err = device_setup.begin(_hostname, _ssid, _password);
+            if (!err) {
+                Serial.println("🟡 Rebooting...");
+                Serial.println();
+                ESP.restart(); // restart device (will start in normal mode)
+            }
+            else {
+                Serial.print("🔴 Something went wrong with a config setup, ERR CODE: "); Serial.println(err);
+                eternalSleep();
+            }
+        }
+
+        // define custom hostname if any
+        if (strlen(_hostname) != 0)
+            WiFi.setHostname(_hostname);
+
+        // this happens only if private key was defined in class constructor.
+        if (strlen(_pkey) > 0 && !device_crypto.isPrivateKeyValid(String(_pkey))) {
+            Serial.println("🔴 Hardcoded private key is invalid");
+            Serial.println("⚪ If you unsure, remove it from the constructor and let device generate a private key automatically on startup");
+            eternalSleep();
+        }
 
         // establish connection to a specified wlan
         wifiBegin();
+
+        // fetch private key
+        // this method should be called only after wifi has been established
+        // because of this: https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/system/random.html
+        if (WiFi.isConnected()) {
+            fetchPrivateKey(_pkey);
+        }
+
         // show state message after wlan initialization
         showStateMessage();
     }
@@ -44,6 +95,9 @@ public:
     * Main loop of `delib`. Handles client<>server communication if established.
     */
     void update() {
+        // check if serial input == "/config"
+        device_setup.listen();
+
         // wlan client handling
         client = server.accept();
         
@@ -76,8 +130,9 @@ public:
                 std::vector<uint8_t> enc {};
                 std::vector<uint8_t> dec {};
                 
-                if (base64ToBytes(body, enc)) {
-                    if (decrypt(enc, dec)) {
+                if (device_crypto.base64ToBytes(body, enc)) {
+                    if (device_crypto.decrypt(enc, _pkey, dec)) {
+                        Serial.print("🔵 ");
                         Serial.write(dec.data(), dec.size());
                         Serial.println();
 
@@ -90,11 +145,11 @@ public:
                         command_buffer = cmd_str;
                     }
                     else {
-                        Serial.println("[Decrypt error]");
+                        Serial.println("🟣 [BAD_DECRYPT]");
                     }
                 }
                 else {
-                    Serial.println("[base64 decode error]");
+                    Serial.println("🔴 BASE64_DECODE_ERR");
                 }
 
                 is_reading_client = false; // unlock `getCommand()` return
@@ -104,6 +159,16 @@ public:
             // so to close the connection call `sendResponse(message)` method in the firmware code.
         }
 
+        // check disconnects
+        if (!WiFi.isConnected()) {
+            Serial.println("🔴 Connection LOST");
+            WiFi.disconnect(true); // close old connection
+            delay(100);
+
+            wifiBegin(); // try open a new one
+            showStateMessage();
+        }
+
         delay(1);
     }
     /**
@@ -111,12 +176,12 @@ public:
     */
     void sendResponse(const char* message) {
         if (client) {
-            // encrypt response message by a stored secret
-            std::vector<uint8_t> enc = encrypt(message);
+            // encrypt response message using private key
+            std::vector<uint8_t> enc = device_crypto.encrypt(message, _pkey);
 
             String base64 = "";
 
-            if (bytesToBase64(enc, base64)) {
+            if (device_crypto.bytesToBase64(enc, base64)) {
                 // send response
                 client.println("HTTP/1.1 200 OK");
                 client.println("Content-Type: text/plain");
@@ -131,7 +196,7 @@ public:
                 command_buffer = "";
             }
             else {
-                Serial.println("[base64 encode error]");
+                Serial.println("🔴 BASE64_ENCODE_ERR");
             }
             
         }
@@ -186,32 +251,56 @@ private:
     // flag to determine whenever ddv server is reading client
     bool is_reading_client = false;
 
+    // wifi hostname
+    const char* _hostname = "";
+
     // wifi credentials ssid
-    String _ssid = "";
+    const char* _ssid = "";
 
     // wifi credentials password
-    String _password  = "";
+    const char* _password  = "";
 
-    // AES-256-GCM 32-bytes key used in enc/dec process
-    const char* _secret = "";
+    // AES-256-GCM 32-bytes private key used in enc/dec process
+    const char* _pkey = "";
 
-    // IV length in bytes
-    const uint8_t iv_len  = 12;
-    
-    // GSM tag length in bytes (for AES-GCM should be 128-bit) 
-    const uint8_t tag_len = 16;
+    // Device setup object to init credentials data
+    DeviceSetup device_setup {};
+    // Device storage object to init credentials data
+    DeviceStorage device_storage {};
+    // Device storage object to init credentials data
+    DeviceCrypto device_crypto {};
+
+    // vector instances to keep data from nvs
+    //
+    std::vector<char> hostname_out {};
+    std::vector<char> ssid_out {};
+    std::vector<char> password_out {};
+    std::vector<char> pkey_out {};
 
     /**
     * Attempts connect via WiFi interface using ssid and key specified with `set_wifi_credentials(wlan_ssid, wlan_key);`.
     */
-    void wifiBegin() {
+    void wifiBegin(bool silent = false) {
+        if (strlen(_ssid) == 0) {
+            Serial.println("🔴 WiFi SSID cannot be empty");
+            Serial.println("⚪ Send '/config' to serial to enter config menu");
+            eternalSleep();
+        }
+
+        WiFi.mode(WIFI_STA);
         WiFi.begin(_ssid, _password);
 
-        Serial.println("Connecting to " + _ssid);
+        if (!silent) {
+            Serial.print("🟡 Connecting to "); Serial.print(_ssid); Serial.println("...");
+        }
 
         while (WiFi.status() != WL_CONNECTED) {
+            // allow to enter device setup
+            // during wifi setup
+            device_setup.listen();
+
             if (WiFi.status() == WL_NO_SSID_AVAIL) {
-                Serial.println("\nSSID is not available.");
+                Serial.println("🔴 SSID is not available");
         
                 // retry again
                 wifiBegin();
@@ -219,18 +308,15 @@ private:
             }
 
             if (WiFi.status() == WL_CONNECT_FAILED) {
-                Serial.println("\nSomethinig went wrong. Is credentials valid?");
-
                 // retry again
-                wifiBegin();
+                wifiBegin(true);
                 return;
             }
-
-            Serial.print(".");
-            delay(200);
+            
+            delay(100);
         }
 
-        Serial.println();
+        Serial.println("🟢 Connection OK");
 
         // start wlan server
         server.begin();
@@ -240,153 +326,108 @@ private:
     */
     void showStateMessage() {
         if (WiFi.isConnected()) { // show service info on success
-            Serial.println("Device name: " + getName());
-            Serial.println("IP: " + getIP());
-            Serial.println("MAC: " + getMAC());
+            Serial.println("⚪ Device name: " + getName());
+            Serial.println("⚪ IP: " + getIP());
+            Serial.println("⚪ MAC: " + getMAC());
         }
         else { // print err message otherwise
-            Serial.println("Connection cannot be established. Please check service messages above.");
+            Serial.println("🔴 Connection cannot be established. Please check service messages above.");
         }
     }
 
     /**
-    * Encrypts `data` string using stored secret bytes by AES-256-GCM.
-    * Returns encrypted data `vector<uint8_t>` on success, empty `vector<uint8_t>` otherwise.
+    * Updates credentials by getting info from NVS.
+    * `silent` - Removes fetching message upon start.
     */
-    std::vector<uint8_t> encrypt(const char* data) {
-        const unsigned char* secret = reinterpret_cast<const unsigned char*>(_secret);
-        const size_t data_len = strlen(data);
+    void fetchWiFiData(const char*& hostname, const char*& ssid, const char*& password, bool silent = false) {
+        if (!silent) {
+            Serial.println("🟡 Fetching WiFi data...");
+        }
+        
+        if (strlen(hostname) == 0) {
+            esp_err_t hostname_err = device_storage.nvsRead("name", hostname_out);
 
-        std::vector<uint8_t> enc(iv_len + data_len + tag_len);
+            if (!hostname_err) {
+                hostname = hostname_out.data();
+            }
+            else if (hostname_err == ESP_ERR_NVS_NOT_FOUND) {
+                Serial.println("🟡 Generating a hostname...");
 
-        uint8_t* iv     = enc.data();
-        uint8_t* cipher = enc.data() + iv_len;
-        uint8_t* tag    = cipher + data_len;
+                String hex = "";
+                device_crypto.randHex4(hex);
 
-        // Generate a fresh IV for every encryption.
-        for (size_t i = 0; i < iv_len; i += 4) {
-            uint32_t rnd_word = esp_random();
-            size_t count = min((size_t)4, iv_len - i);
-            memcpy(iv + i, &rnd_word, count);
+                // set random device hostname if unset
+                if (!device_storage.nvsWrite("name", String("device_" + hex).c_str())) {
+                    fetchWiFiData(hostname, ssid, password, true);
+                    return;
+                }
+            }
         }
 
-        mbedtls_gcm_context ctx {};
-        mbedtls_gcm_init(&ctx);
-
-        int rc = mbedtls_gcm_setkey(&ctx, MBEDTLS_CIPHER_ID_AES, secret, 256);
-
-        if (rc == 0) {
-            rc = mbedtls_gcm_crypt_and_tag(
-                &ctx,
-                MBEDTLS_GCM_ENCRYPT,
-                data_len,
-                iv, iv_len,
-                nullptr, 0,
-                reinterpret_cast<const uint8_t*>(data),
-                cipher,
-                tag_len, tag
-            );
+        if (strlen(ssid) == 0 && !device_storage.nvsRead("ssid", ssid_out)) {
+            ssid = ssid_out.data();
         }
 
-        mbedtls_gcm_free(&ctx);
-
-        if (rc != 0) {
-            enc.clear();
+        if (strlen(password) == 0 && !device_storage.nvsRead("pwd", password_out)) {
+            password = password_out.data();
         }
-
-        return enc;
     }
 
     /**
-    * Decrypts `enc` vector using stored secret bytes by AES-256-GCM.
-    * Returns decrypted data string on success, empty `vector` otherwise.
-    * `enc` - an encrypted data to decrypt;
-    * `output` - an output `vector<uint8_t>` reference to store decrypted data.
-    */
-    bool decrypt(const std::vector<uint8_t>& enc, std::vector<uint8_t>& output) {
-        const unsigned char* secret = reinterpret_cast<const unsigned char*>(_secret);
-
-        if (enc.size() < iv_len + tag_len) {
-            return false;
-        }
-
-        const uint8_t*  iv          = enc.data();
-        const uint8_t*  cipher      = enc.data() + iv_len;
-        const size_t    cipher_len  = enc.size() - iv_len - tag_len;
-        const uint8_t*  tag         = enc.data() + iv_len + cipher_len;
-
-        output.resize(cipher_len);
-
-        mbedtls_gcm_context ctx {};
-        mbedtls_gcm_init(&ctx);
-
-        int rc = mbedtls_gcm_setkey(&ctx, MBEDTLS_CIPHER_ID_AES, secret, 256);
-
-        if (rc == 0) {
-            rc = mbedtls_gcm_auth_decrypt(
-                &ctx,
-                cipher_len,
-                iv, iv_len,
-                nullptr, 0,
-                tag, tag_len,
-                cipher,
-                output.data()
-            );
-        }
-
-        mbedtls_gcm_free(&ctx);
-
-        if (rc != 0) {
-            output.clear();
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * Decodes string data to `vector<uint8_t>`.
-     * `data` - an original base64 data to decode.
-     * `output` - a `vector<uint8_t>` reference to store decoded data.
+     * Generates private key and writes it into nvs.
+     * Shows the key it the end *once*.
+     * [It's impossible to see the key again after reboot]
      */
-    bool base64ToBytes(const String& data, std::vector<uint8_t>& output) {
-        output.resize((data.length() / 4) * 3 + 3);
+    void mkPrivateKey(String message) {
+        Serial.println(message);
 
-        size_t out_len = 0;
-        int rc = mbedtls_base64_decode(
-            output.data(),
-            output.size(),
-            &out_len,
-            reinterpret_cast<const unsigned char*>(data.c_str()),
-            data.length()
-        );
+        String pkey = "";
+        device_crypto.randHex32(pkey);
 
-        if (rc != 0) {
-            output.clear();
-            return false;
-        }
+        device_storage.nvsWrite("pkey", pkey.c_str());
 
-        output.resize(out_len);
-        return true;
+        Serial.println("❗ Private key (once): " + pkey);
     }
-    bool bytesToBase64(const std::vector<uint8_t>& enc, String& output) {
-        std::vector<unsigned char> buffer(((enc.size() + 2) / 3) * 4 + 1);
 
-        size_t enc_len = 0;
-        int rc = mbedtls_base64_encode(
-            buffer.data(),
-            buffer.size(),
-            &enc_len,
-            enc.data(),
-            enc.size()
-        );
-
-        if (rc != 0) {
-            return false;
+    /**
+    * Updates private key data by getting info from NVS.
+    * `pkey` - private key reference.
+    */
+    void fetchPrivateKey(const char*& pkey, bool silent = false) {
+        if (!silent) {
+            Serial.println("🟡 Fetching private key...");
         }
 
-        buffer[enc_len] = '\0';
-        output = reinterpret_cast<const char*>(buffer.data());
-        return true;
+        if (strlen(pkey) == 0) {
+            esp_err_t pkey_err = device_storage.nvsRead("pkey", pkey_out);
+        
+            if (!pkey_err) {
+                pkey = pkey_out.data();
+                // re-gen key since nvs data is invalid
+                if (!device_crypto.isPrivateKeyValid(String(pkey))) {
+                    mkPrivateKey("🟠 Private key is invalid, re-generating...");
+                    fetchPrivateKey(pkey, true); // re-get value from memory
+                    return;
+                }
+            }
+            else if (pkey_err == ESP_ERR_NVS_NOT_FOUND) {
+                mkPrivateKey("🟡 Generating a private key...");
+                fetchPrivateKey(pkey, true); // re-get value from memory
+                return;
+            }
+        }
+    }
+
+    /**
+     * Locks further app execution with a cool message.
+     */
+    void eternalSleep() {
+        Serial.println("⚫ Entering eternal sleep mode...");
+        while (true) {
+            // allow to enter device setup
+            // during eternal sleep
+            device_setup.listen();
+            delay(100);
+        };
     }
 };
