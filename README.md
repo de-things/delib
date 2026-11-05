@@ -12,7 +12,6 @@ There're 2 ways to use this library for your IoT device.
 
 ```cpp
 // Arduino IDE example firmware
-// [Tested on ESP32C5]
 
 #include <DethingsDevice.h>
 
@@ -45,6 +44,8 @@ When device is connected to a serial port send there: `/config`. It will reboot 
 This one assumes you won't use `/config` at all so all data is *hardcoded*:
 
 ```cpp
+// Arduino IDE example firmware
+
 #include <DethingsDevice.h>
 
 DethingsDevice device(
